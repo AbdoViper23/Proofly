@@ -5,75 +5,49 @@ use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap,Storable};
 use std::{cell::RefCell,borrow::Cow};
 use std::collections::HashMap;
 
-/*
-type Memory = VirtualMemory<DefaultMemoryImpl>;
-
-const MAX_MEMORY_SIZE:u32=5000;
-
-
 thread_local! {
-
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-    
+
     static COMPANY_MAP: RefCell<StableBTreeMap<u64, Company, Memory>> = RefCell::new(
-        StableBTreeMap::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
-        )
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
     );
-    static COMPANY_ID: RefCell<u64> = RefCell::new(1);
-
-    static EMPLOYEE_MAP: RefCell<StableBTreeMap<String, Employee, Memory>> = RefCell::new(
-        StableBTreeMap::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))
-        )
+    static EMPLOYEE_MAP: RefCell<StableBTreeMap<u64, Employee, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))))
     );
-    static EMPLOYEE_ID: RefCell<u64> = RefCell::new(3);
-
-
-    static PROOF_MAP: RefCell<StableBTreeMap<String, Proof, Memory>> = RefCell::new(
-        StableBTreeMap::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))
-        )
+    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<u64, StableBTreeSet<u64, Memory>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2))))
     );
-    static PROOF_ID: RefCell<u64> = RefCell::new(3);
-
-
+    static EMPLOYEE_COMPANIES: RefCell<StableBTreeMap<u64, StableBTreeSet<u64, Memory>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3))))
+    );
+    static PROOF_MAP: RefCell<StableBTreeMap<u64, Proof, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4))))
+    );
 }
-*/
 
-//####################################################################################
-
-struct Company{
-    
-    name:String,
-    admin_id:String,
-    id: String,
+struct Company {
+    id: u64,
+    name: String,
+    admin_id: u64,
     created_at: u64,
     is_active: bool,
-    emp:Vec<Employee>,
 }
-
 impl Company {
     fn add_employee(&mut self, employee: Employee) {
-        self.emp.push(employee);
     }
     
     fn list_my_employee(&self)->&Vec<Employee>{
-        &self.emp
     }
 
     fn remove_employee(&mut self, emp_id:u64) {
-        self.emp.retain(|e| e.id != emp_id);
     }
 }
 
 
-//####################################################################################
 
 struct Employee {
     id: u64,
-    company_ids: Vec<String>,
     principal: String,
     full_name: String,
     added_at: u64,
@@ -94,6 +68,10 @@ impl Employee {
             is_used: false,
         }
     }
+
+    fn list_comp(&self) -> Vec<String>{
+        self.company_ids.clone()
+    }
 }
 
 
@@ -109,7 +87,8 @@ struct Proof {
     is_used: bool,
 }
 
-//####################################################################################
+
+
 async fn generate_random_code(length: usize) -> String {
     let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789".chars().collect::<Vec<char>>();
     
@@ -139,13 +118,6 @@ async fn generate_proof(company_index:u64) -> String {
 
 //    let e = EMPLOYEES.with(|m| m.borrow().get(&user_id).unwrap());
 
-    let e = Employee {
-        id: 0,
-        company_ids: vec!["Mercatura".to_string(),"Company99".to_string(),"Merca".to_string()],
-        principal: user_id.clone(),
-        full_name: "Abdelrahman".to_string(),
-        added_at: ic_cdk::api::time(),
-    };
     e.gen_proof(company_index).await.code
 }
 
@@ -156,14 +128,7 @@ fn list_my_companies() -> Vec<String> {
 
 //    let e = EMPLOYEES.with(|m| m.borrow().get(&user_id).unwrap());
 
-    let e = Employee {
-        id: 0,
-        company_ids: vec!["Mercatura".to_string(),"Company99".to_string(),"Merca".to_string()],
-        principal: user_id.clone(),
-        full_name: "Abdelrahman".to_string(),
-        added_at: ic_cdk::api::time(),
-    };
-    e.company_ids
+    e.list_comp()
 }
 
 #[ic_cdk::query]

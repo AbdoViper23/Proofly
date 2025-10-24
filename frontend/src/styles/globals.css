@@ -48,6 +48,19 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+
+  /*  */
+
+
+  --color-primary-black: #171717;
+  --color-secondary-black: #242424;
+  --color-gray-700: #898989;
+  --color-gray: #C0C2C4;
+  --font-cal: var(--font-cal);
+  --font-matter: var(--font-matter);
+  --font-inter: var(--font-inter);
+  --font-mono: var(--font-mono);
 }
 
 :root {
@@ -137,7 +150,9 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
-    @apply bg-background text-foreground;
+    /* @apply bg-background text-foreground; */
+    @apply bg-[#F4F4F4] text-foreground;
   }
 }

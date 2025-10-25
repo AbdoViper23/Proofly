@@ -155,4 +155,8 @@
     /* @apply bg-background text-foreground; */
     @apply bg-[#F4F4F4] text-foreground;
   }
+
+  .seciton-py {
+    @apply py-6 lg:py-20 px-1
+  }
 }

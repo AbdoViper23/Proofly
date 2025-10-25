@@ -25,8 +25,8 @@ export default function HowItWorks() {
 
     return (
         <BorderLayout id="how-it-works" >
-            <div className="py-6 lg:py-20 px-1">
-                <div className='font-matter space-y-4 pb-3.5 flex flex-col items-center justify-center text-center'>
+            <div className="seciton-py">
+                <div className='font-matter space-y-4 pb-8 flex flex-col items-center justify-center text-center'>
                     {/* label */}
                     <div className='text-xs text-secondary-black flex gap-1.5 px-3.5 py-1 bg-white items-center shadow border border-gray rounded-full w-fit [&>svg]:size-4'>
                         How it works <Workflow/>

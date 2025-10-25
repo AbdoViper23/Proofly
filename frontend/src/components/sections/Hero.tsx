@@ -12,7 +12,7 @@ export default function Hero() {
         <BorderLayout id="hero" className="mt-3 border-t">
             <CrossSVG className="absolute -left-3 -top-3 " />
             <CrossSVG className="absolute -right-3 -top-3" />
-            <div className="card-shadow px-2 lg:p-20 lg:pb-10 grid max-lg:grid-rows-[auto_1fr] gap-4 lg:grid-cols-2 lg:gap-10 bg-white rounded-xl border border-gray font-matter overflow-hidden relative pb-2">
+            <div className="shadow-md px-2 lg:p-20 lg:pb-10 grid max-lg:grid-rows-[auto_1fr] gap-4 lg:grid-cols-2 lg:gap-10 bg-white rounded-xl border border-gray font-matter overflow-hidden relative pb-2">
                 <motion.div
                     initial={{ opacity: 0, y: "30px" }}
                     animate={{ opacity: 1, y: "0px" }}
@@ -43,7 +43,7 @@ export default function Hero() {
                                 variant="outline"
                             >
                                 <LoadingSwap isLoading={false}>
-                                    <Link href="/">Verify Proof Code</Link>
+                                    <Link href="/verify">Verify Proof Code</Link>
                                 </LoadingSwap>
                             </Button>
                             {/* <Button asChild

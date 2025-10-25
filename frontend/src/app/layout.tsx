@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "../styles/globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { calSemibold, geistMono, geistSans, inter, matter, robotoMono } from "../../public/fonts";
+import { ToastProvider } from "@/components/ui/toast";
 
 
 
@@ -26,7 +27,9 @@ export default function RootLayout({
           // enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

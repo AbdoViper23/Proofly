@@ -1,30 +1,41 @@
 use candid::{export_service, Principal};
 use candid::{CandidType,Decode,Deserialize,Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
-use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap,Storable};
+use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap, StableBTreeSet,Storable};
 use std::{cell::RefCell,borrow::Cow};
 use std::collections::HashMap;
+
+type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
+    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))) // compID -> arr of empID
+    );
+
+    static EMPLOYEE_COMPANIES: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1)))) // empID -> arr of compID
+    );
+    static EMPLOYEE_COMPANIES_ADMIN: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))) // empID -> arr of compAdminID 
+    );
+/*
+
+    //###########################################################
     static COMPANY_MAP: RefCell<StableBTreeMap<u64, Company, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))))
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3)))) // CompID -> comp
     );
     static EMPLOYEE_MAP: RefCell<StableBTreeMap<u64, Employee, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))))
-    );
-    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<u64, StableBTreeSet<u64, Memory>, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2))))
-    );
-    static EMPLOYEE_COMPANIES: RefCell<StableBTreeMap<u64, StableBTreeSet<u64, Memory>, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3))))
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4)))) // EmpID -> emp
     );
     static PROOF_MAP: RefCell<StableBTreeMap<u64, Proof, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4))))
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))) // ProofID -> Proof
     );
+    */
 }
+
 
 struct Company {
     id: u64,

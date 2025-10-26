@@ -2,6 +2,7 @@ use candid::{export_service, Principal};
 use candid::{CandidType,Decode,Deserialize,Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap,Storable,BoundedStorable};
+use std::string;
 use std::{cell::RefCell,borrow::Cow};
 use std::collections::HashMap;
 
@@ -31,16 +32,17 @@ thread_local! {
     static PROOF_MAP: RefCell<StableBTreeMap<StorableString, Proof, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))) // ProofID -> Proof
     );
+    static NEXT_PROOF_ID: RefCell<u64> = RefCell::new(6);
 }
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct StorableString {
-    pub str: String,
+    pub value: String,
 }
-
 pub struct IDList {
     pub ids: Vec<String>,
 }
+
 
 impl Storable for IDList {
     fn to_bytes(&self) -> Cow<[u8]> {
@@ -133,61 +135,21 @@ struct Company {
     is_active: bool,
 }
 
-impl Company {
-    fn add_employee(&mut self, employee: Employee) {
-    }
-    
-    fn list_my_employee(&self)->&Vec<Employee>{
-    }
-
-    fn remove_employee(&mut self, emp_id:u64) {
-    }
-}
-
-
 #[derive(CandidType, Deserialize, Clone)]
 struct Employee {
-    id: u64,
     principal: String,
     full_name: String,
-    added_at: u64,
 }
-
-impl Employee {
-    async fn gen_proof(&self,company_index:u64) -> Proof {
-        let random_code = generate_random_code(10).await;
-        let now = ic_cdk::api::time();
-        let company_id = &self.company_ids[company_index as usize];
-        let proof_id=0; //toDo get frome stable memo
-        Proof {
-            code: format!("{}-{}-{}",company_id, random_code,proof_id),
-            company_id: company_id.clone(),
-            employee_id: self.id.clone(),
-            created_at: now,
-            expires_at: now + (24 * 60 * 60 * 1_000_000_000),
-            is_used: false,
-        }
-    }
-
-    fn list_comp(&self) -> Vec<String>{
-        self.company_ids.clone()
-    }
-}
-
-
-//####################################################################################
 
 #[derive(CandidType, Deserialize, Clone)]
 struct Proof {
     code: String,
     company_id: String,
-    employee_id: u64,
+    employee_id: String,
     created_at: u64,
     expires_at: u64,
     is_used: bool,
 }
-
-
 
 async fn generate_random_code(length: usize) -> String {
     let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789".chars().collect::<Vec<char>>();
@@ -212,23 +174,109 @@ async fn generate_random_code(length: usize) -> String {
 
 
 #[ic_cdk::update]
-async fn generate_proof(company_index:u64) -> String {
+async fn generate_proof(company_id:String) -> String {
     let caller_principal = ic_cdk::caller();
-    let user_id = caller_principal.to_text();
+    let user_id: String = caller_principal.to_text();
 
-//    let e = EMPLOYEES.with(|m| m.borrow().get(&user_id).unwrap());
+    let random_code = generate_random_code(10).await;
+    let now = ic_cdk::api::time();
 
-    e.gen_proof(company_index).await.code
+    let proof_id = NEXT_PROOF_ID.with(|next_id| {
+        let mut id = next_id.borrow_mut();
+        let current_id = *id;
+        *id += 1;
+        current_id
+    });
+    
+    let cur_proof=Proof {
+        code: format!("{}-{}-{}",company_id, random_code,proof_id.to_string()),
+        company_id: company_id.clone(),
+        employee_id: user_id.clone(),
+        created_at: now,
+        expires_at: now + (24 * 60 * 60 * 1_000_000_000),
+        is_used: false,
+    };
+
+    let proof_key = StorableString { value: proof_id.to_string() };
+
+    PROOF_MAP.with(|p|{
+        p.borrow_mut().insert(proof_key, cur_proof.clone());
+    });
+    cur_proof.code
 }
 
 #[ic_cdk::query]
 fn list_my_companies() -> Vec<String> {
     let caller_principal = ic_cdk::caller();
-    let user_id = caller_principal.to_text();
 
-//    let e = EMPLOYEES.with(|m| m.borrow().get(&user_id).unwrap());
+    let user_id = StorableString {
+        value : caller_principal.to_text(),
+    };
+    
+    EMPLOYEE_COMPANIES.with(|map| {
+        let map_ref = map.borrow();
+        match map_ref.get(&user_id) {
+            Some(id_list) => id_list.ids.clone(),
+            None => Vec::new(),
+        }
+    })
+}
 
-    e.list_comp()
+#[ic_cdk::query]
+fn list_company_employess(comp_id:String) -> Vec<String> {
+    let user_id = StorableString {
+        value :comp_id,
+    };
+    
+    COMPANY_EMPLOYEES.with(|map| {
+        let map_ref = map.borrow();
+        match map_ref.get(&user_id) {
+            Some(id_list) => id_list.ids.clone(),
+            None => Vec::new(),
+        }
+    })
+}
+
+#[ic_cdk::update]
+fn add_employee(comp_id:String,emp_id:String)->bool{
+    COMPANY_EMPLOYEES.with(|comp|{
+        let mut map=comp.borrow_mut();
+        let comp_key = StorableString { value: comp_id.clone() };
+       
+        if let Some(mut emp_list) = map.get(&comp_key) {
+            if !emp_list.ids.contains(&emp_id) {
+                emp_list.ids.push(emp_id);
+                map.insert(comp_key, emp_list);
+            }
+        } else {
+            let new_list = IDList { ids: vec![emp_id] };
+            map.insert(comp_key, new_list);
+        }
+    });
+    true
+}
+
+#[ic_cdk::update]
+fn remove_employee(comp_id:String,emp_id:String,)->bool{
+    COMPANY_EMPLOYEES.with(|comp|{
+        let mut map=comp.borrow_mut();
+        let comp_key = StorableString { value: comp_id.clone() };
+       
+        if let Some(mut emp_list) = map.get(&comp_key) {
+            if let Some(pos) = emp_list.ids.iter().position(|id| id == &emp_id) {
+                emp_list.ids.remove(pos);
+                map.insert(comp_key, emp_list);
+                return true;
+            } else {
+                // emp not found
+                return false;
+            }
+        } else {
+            // comp not found
+            return false;
+        }
+    });
+    true
 }
 
 #[ic_cdk::query]

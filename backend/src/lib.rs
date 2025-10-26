@@ -222,6 +222,23 @@ fn list_my_companies() -> Vec<String> {
     })
 }
 
+fn list_my_admin_companies() -> Vec<String> {
+    let caller_principal = ic_cdk::caller();
+
+    let user_id = StorableString {
+        value : caller_principal.to_text(),
+    };
+    
+    EMPLOYEE_COMPANIES_ADMIN.with(|map| {
+        let map_ref = map.borrow();
+        match map_ref.get(&user_id) {
+            Some(id_list) => id_list.ids.clone(),
+            None => Vec::new(),
+        }
+    })
+}
+
+
 #[ic_cdk::query]
 fn list_company_employess(comp_id:String) -> Vec<String> {
     let user_id = StorableString {

@@ -1,7 +1,7 @@
 use candid::{export_service, Principal};
 use candid::{CandidType,Decode,Deserialize,Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
-use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap, StableBTreeSet,Storable};
+use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap,Storable,BoundedStorable};
 use std::{cell::RefCell,borrow::Cow};
 use std::collections::HashMap;
 
@@ -11,32 +11,120 @@ thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<StorableString, IDList, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))) // compID -> arr of empID
     );
 
-    static EMPLOYEE_COMPANIES: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+    static EMPLOYEE_COMPANIES: RefCell<StableBTreeMap<StorableString, IDList, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1)))) // empID -> arr of compID
     );
-    static EMPLOYEE_COMPANIES_ADMIN: RefCell<StableBTreeMap<u64, Vec<u64>, Memory>> = RefCell::new(
+    static EMPLOYEE_COMPANIES_ADMIN: RefCell<StableBTreeMap<StorableString, IDList, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))) // empID -> arr of compAdminID 
     );
-/*
 
-    //###########################################################
-    static COMPANY_MAP: RefCell<StableBTreeMap<u64, Company, Memory>> = RefCell::new(
+    static COMPANY_MAP: RefCell<StableBTreeMap<StorableString, Company, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(3)))) // CompID -> comp
     );
-    static EMPLOYEE_MAP: RefCell<StableBTreeMap<u64, Employee, Memory>> = RefCell::new(
+    static EMPLOYEE_MAP: RefCell<StableBTreeMap<StorableString, Employee, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4)))) // EmpID -> emp
     );
-    static PROOF_MAP: RefCell<StableBTreeMap<u64, Proof, Memory>> = RefCell::new(
+    static PROOF_MAP: RefCell<StableBTreeMap<StorableString, Proof, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))) // ProofID -> Proof
     );
-    */
+}
+
+#[derive(CandidType, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct StorableString {
+    pub str: String,
+}
+
+pub struct IDList {
+    pub ids: Vec<String>,
+}
+
+impl Storable for IDList {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(&self.ids).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self {
+            ids: Decode!(bytes.as_ref(), Vec<String>).unwrap(),
+        }
+    }
+}
+
+impl Storable for Company {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Company).unwrap()
+    }
+}
+
+impl Storable for Employee {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Employee).unwrap()
+    }
+}
+
+impl Storable for Proof {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Proof).unwrap()
+    }
+}
+
+impl Storable for StorableString {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(&self.str).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self{
+            str: Decode!(bytes.as_ref(), String).unwrap(),
+        }
+    }
 }
 
 
+impl BoundedStorable for IDList {
+    const MAX_SIZE: u32 = 1024;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl BoundedStorable for Company {
+    const MAX_SIZE: u32 = 512;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl BoundedStorable for Employee {
+    const MAX_SIZE: u32 = 512;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl BoundedStorable for Proof {
+    const MAX_SIZE: u32 = 512;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl BoundedStorable for StorableString {
+    const MAX_SIZE: u32 = 200;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+
+
+#[derive(CandidType, Deserialize, Clone)]  
 struct Company {
     id: u64,
     name: String,
@@ -44,6 +132,7 @@ struct Company {
     created_at: u64,
     is_active: bool,
 }
+
 impl Company {
     fn add_employee(&mut self, employee: Employee) {
     }
@@ -56,7 +145,7 @@ impl Company {
 }
 
 
-
+#[derive(CandidType, Deserialize, Clone)]
 struct Employee {
     id: u64,
     principal: String,
@@ -88,7 +177,7 @@ impl Employee {
 
 //####################################################################################
 
-
+#[derive(CandidType, Deserialize, Clone)]
 struct Proof {
     code: String,
     company_id: String,

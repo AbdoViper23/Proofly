@@ -5,6 +5,7 @@ use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap,Storable,BoundedStor
 use std::string;
 use std::{cell::RefCell,borrow::Cow};
 use std::collections::HashMap;
+use sha2::{Digest, Sha256};
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -20,7 +21,7 @@ thread_local! {
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1)))) // empID -> arr of compID
     );
     static EMPLOYEE_COMPANIES_ADMIN: RefCell<StableBTreeMap<StorableString, IDList, Memory>> = RefCell::new(
-        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))) // empID -> arr of compAdminID 
+        StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(2)))) // empID Admin -> arr of compID  
     );
 
     static COMPANY_MAP: RefCell<StableBTreeMap<StorableString, Company, Memory>> = RefCell::new(
@@ -171,7 +172,18 @@ async fn generate_random_code(length: usize) -> String {
     result
 }
 
+fn is_company_admin(admin_principal: String, company_id: &String) -> bool {
+    let admin_key = StorableString { value: admin_principal };
 
+    EMPLOYEE_COMPANIES_ADMIN.with(|comp| {
+        let map = comp.borrow();
+        if let Some(comp_list) = map.get(&admin_key) {
+            return comp_list.ids.contains(company_id);
+        }
+        false
+    });
+    true
+}
 
 #[ic_cdk::update]
 async fn generate_proof(company_id:String) -> String {
@@ -187,9 +199,15 @@ async fn generate_proof(company_id:String) -> String {
         *id += 1;
         current_id
     });
-    
+    let proof_code=format!("{}-{}-{}",company_id, random_code,proof_id.to_string());
+
+    let mut hasher = Sha256::new();
+    hasher.update(proof_code.as_bytes());
+    let result = hasher.finalize();
+    let hashed_code = hex::encode(result);
+
     let cur_proof=Proof {
-        code: format!("{}-{}-{}",company_id, random_code,proof_id.to_string()),
+        code: hashed_code,
         company_id: company_id.clone(),
         employee_id: user_id.clone(),
         created_at: now,
@@ -202,7 +220,7 @@ async fn generate_proof(company_id:String) -> String {
     PROOF_MAP.with(|p|{
         p.borrow_mut().insert(proof_key, cur_proof.clone());
     });
-    cur_proof.code
+    proof_code
 }
 
 #[ic_cdk::query]
@@ -222,6 +240,7 @@ fn list_my_companies() -> Vec<String> {
     })
 }
 
+#[ic_cdk::query]
 fn list_my_admin_companies() -> Vec<String> {
     let caller_principal = ic_cdk::caller();
 
@@ -256,6 +275,13 @@ fn list_company_employess(comp_id:String) -> Vec<String> {
 
 #[ic_cdk::update]
 fn add_employee(comp_id:String,emp_id:String)->bool{
+    let caller_principal = ic_cdk::caller();
+
+    if !is_company_admin(caller_principal.clone().to_text(), &comp_id) {
+        ic_cdk::println!("Caller is not admin for this company.");
+        return false;
+    }
+
     COMPANY_EMPLOYEES.with(|comp|{
         let mut map=comp.borrow_mut();
         let comp_key = StorableString { value: comp_id.clone() };
@@ -275,6 +301,12 @@ fn add_employee(comp_id:String,emp_id:String)->bool{
 
 #[ic_cdk::update]
 fn remove_employee(comp_id:String,emp_id:String,)->bool{
+    let caller_principal = ic_cdk::caller();
+    if !is_company_admin(caller_principal.clone().to_text(), &comp_id) {
+        ic_cdk::println!("Caller is not admin for this company.");
+        return false;
+    }
+
     COMPANY_EMPLOYEES.with(|comp|{
         let mut map=comp.borrow_mut();
         let comp_key = StorableString { value: comp_id.clone() };

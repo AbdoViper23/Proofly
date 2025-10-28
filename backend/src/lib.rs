@@ -1,4 +1,5 @@
 use candid::{CandidType,Decode,Deserialize,Encode};
+use ic_cdk::caller;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap,Storable,BoundedStorable};
 use std::{cell::RefCell,borrow::Cow};
@@ -126,9 +127,9 @@ impl BoundedStorable for StorableString {
 
 #[derive(CandidType, Deserialize, Clone)]
 struct Company {
-    id: u64,
+    id: String,
     name: String,
-    admin_id: u64,
+    admin_id: String,
     created_at: u64,
     is_active: bool,
 }
@@ -384,6 +385,61 @@ fn verify_proof(proof_code: String) -> Result<Proof, &'static str> {
         map.insert(proof_id, proof.clone());
         Ok(proof.clone())
     })
+}
+
+#[ic_cdk::update]
+fn add_new_companey(comp_username:String, comp_name:String)->Result<(), &'static str>{
+    
+    let storable_comp_name=StorableString{value:comp_name.clone()};
+    // check the username
+    let exists = COMPANY_MAP.with(|mp| {
+        let map = mp.borrow();
+        map.contains_key(&storable_comp_name)
+    });
+    if exists {
+        return Err("username is alrady exist");
+    }
+    
+
+    // add this companey with caller admin
+    let admin=caller();
+    let admin = admin.to_string();
+
+    // compony data
+    let comp=Company{
+        id:comp_username.clone(),
+        name:comp_name.clone(),
+        admin_id:admin.clone(),
+        created_at:ic_cdk::api::time(),
+        is_active:true, // ToDo : subscribtion using payment mathod 
+    };
+
+    // insert company in COMPANY_MAP
+    COMPANY_MAP.with(|mp| {
+        mp.borrow_mut().insert(storable_comp_name.clone(), comp);
+    });
+
+    let storable_admin = StorableString{value:admin};
+
+    
+    EMPLOYEE_COMPANIES_ADMIN.with(|map| {
+        let mut map = map.borrow_mut();
+
+        if let Some(mut id_list) = map.get(&storable_admin) {
+            //admin already if exists -> append new company
+            id_list.ids.push(comp_name.clone());
+            map.insert(storable_admin, id_list);
+        } else {
+            // admin not found -> create new entry
+            let new_list = IDList {
+                ids: vec![comp_name.clone()],
+            };
+            map.insert(storable_admin, new_list);
+        }
+    });
+
+    Ok(())
+
 }
 
 ic_cdk::export_candid!();

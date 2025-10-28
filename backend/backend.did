@@ -6,13 +6,15 @@ type Proof = record {
   expires_at : nat64;
   employee_id : text;
 };
-type Result = variant { Ok : Proof; Err : text };
+type Result = variant { Ok; Err : text };
+type Result_1 = variant { Ok : Proof; Err : text };
 service : {
   add_employee : (text, text) -> (bool);
+  add_new_companey : (text, text) -> (Result);
   generate_proof : (text) -> (opt text);
   list_company_employess : (text) -> (vec text) query;
   list_my_admin_companies : () -> (vec text) query;
   list_my_companies : () -> (vec text) query;
   remove_employee : (text, text) -> (bool);
-  verify_proof : (text) -> (Result) query;
+  verify_proof : (text) -> (Result_1) query;
 }

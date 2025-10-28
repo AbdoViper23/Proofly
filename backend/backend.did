@@ -1,5 +1,18 @@
+type Proof = record {
+  is_used : bool;
+  code : text;
+  created_at : nat64;
+  company_id : text;
+  expires_at : nat64;
+  employee_id : text;
+};
+type Result = variant { Ok : Proof; Err : text };
 service : {
-  generate_proof : (nat64) -> (text);
+  add_employee : (text, text) -> (bool);
+  generate_proof : (text) -> (opt text);
+  list_company_employess : (text) -> (vec text) query;
+  list_my_admin_companies : () -> (vec text) query;
   list_my_companies : () -> (vec text) query;
-  verify_proof : (text) -> (bool) query;
+  remove_employee : (text, text) -> (bool);
+  verify_proof : (text) -> (Result) query;
 }

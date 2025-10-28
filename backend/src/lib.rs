@@ -1,14 +1,11 @@
-use candid::{export_service, Principal};
 use candid::{CandidType,Decode,Deserialize,Encode};
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{DefaultMemoryImpl,StableBTreeMap,Storable,BoundedStorable};
-use std::string;
 use std::{cell::RefCell,borrow::Cow};
-use std::collections::HashMap;
 use sha2::{Digest, Sha256};
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
-
+static PROOF_LENTGH: u32 = 10;
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
@@ -30,10 +27,10 @@ thread_local! {
     static EMPLOYEE_MAP: RefCell<StableBTreeMap<StorableString, Employee, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(4)))) // EmpID -> emp
     );
-    static PROOF_MAP: RefCell<StableBTreeMap<StorableString, Proof, Memory>> = RefCell::new(
+    static PROOF_MAP: RefCell<StableBTreeMap<u128, Proof, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))) // ProofID -> Proof
     );
-    static NEXT_PROOF_ID: RefCell<u64> = RefCell::new(6);
+    static NEXT_PROOF_ID: RefCell<u128> = RefCell::new(6);
 }
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -127,7 +124,7 @@ impl BoundedStorable for StorableString {
 
 
 
-#[derive(CandidType, Deserialize, Clone)]  
+#[derive(CandidType, Deserialize, Clone)]
 struct Company {
     id: u64,
     name: String,
@@ -138,7 +135,7 @@ struct Company {
 
 #[derive(CandidType, Deserialize, Clone)]
 struct Employee {
-    principal: String,
+    id: String,
     full_name: String,
 }
 
@@ -172,8 +169,8 @@ async fn generate_random_code(length: usize) -> String {
     result
 }
 
-fn is_company_admin(admin_principal: String, company_id: &String) -> bool {
-    let admin_key = StorableString { value: admin_principal };
+fn is_company_admin(admin_principal: &String, company_id: &String) -> bool {
+    let admin_key = StorableString { value: admin_principal.clone() };
 
     EMPLOYEE_COMPANIES_ADMIN.with(|comp| {
         let map = comp.borrow();
@@ -181,16 +178,33 @@ fn is_company_admin(admin_principal: String, company_id: &String) -> bool {
             return comp_list.ids.contains(company_id);
         }
         false
-    });
-    true
+    })
+}
+
+fn is_works_on(user_id: &String, company_id: &String) -> bool {
+    let user_key = StorableString { value: user_id.clone() };
+
+    EMPLOYEE_COMPANIES.with(|comp| {
+        let map = comp.borrow();
+        if let Some(comp_list) = map.get(&user_key) {
+            return comp_list.ids.contains(company_id);
+        }
+        false
+    })
 }
 
 #[ic_cdk::update]
-async fn generate_proof(company_id:String) -> String {
+async fn generate_proof(company_id:String) -> Option<String> {
     let caller_principal = ic_cdk::caller();
     let user_id: String = caller_principal.to_text();
 
-    let random_code = generate_random_code(10).await;
+    //cheack if user_id works in company_id or not
+    if !is_works_on(&user_id,&company_id) {
+        ic_cdk::println!("Caller is not works in this company.");
+        return None;
+    }
+
+    let random_code = generate_random_code(PROOF_LENTGH as usize).await;
     let now = ic_cdk::api::time();
 
     let proof_id = NEXT_PROOF_ID.with(|next_id| {
@@ -199,7 +213,7 @@ async fn generate_proof(company_id:String) -> String {
         *id += 1;
         current_id
     });
-    let proof_code=format!("{}-{}-{}",company_id, random_code,proof_id.to_string());
+    let proof_code=format!("{}-{}", random_code,proof_id.to_string()); // clear text-Proof ID
 
     let mut hasher = Sha256::new();
     hasher.update(proof_code.as_bytes());
@@ -215,12 +229,10 @@ async fn generate_proof(company_id:String) -> String {
         is_used: false,
     };
 
-    let proof_key = StorableString { value: proof_id.to_string() };
-
     PROOF_MAP.with(|p|{
-        p.borrow_mut().insert(proof_key, cur_proof.clone());
+        p.borrow_mut().insert(proof_id, cur_proof.clone());
     });
-    proof_code
+    Some(proof_code)
 }
 
 #[ic_cdk::query]
@@ -277,7 +289,7 @@ fn list_company_employess(comp_id:String) -> Vec<String> {
 fn add_employee(comp_id:String,emp_id:String)->bool{
     let caller_principal = ic_cdk::caller();
 
-    if !is_company_admin(caller_principal.clone().to_text(), &comp_id) {
+    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
         ic_cdk::println!("Caller is not admin for this company.");
         return false;
     }
@@ -302,7 +314,7 @@ fn add_employee(comp_id:String,emp_id:String)->bool{
 #[ic_cdk::update]
 fn remove_employee(comp_id:String,emp_id:String,)->bool{
     let caller_principal = ic_cdk::caller();
-    if !is_company_admin(caller_principal.clone().to_text(), &comp_id) {
+    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
         ic_cdk::println!("Caller is not admin for this company.");
         return false;
     }
@@ -329,8 +341,49 @@ fn remove_employee(comp_id:String,emp_id:String,)->bool{
 }
 
 #[ic_cdk::query]
-fn verify_proof(proof_code: String) -> bool {
-    return true;// toDo
+fn verify_proof(proof_code: String) -> Result<Proof, &'static str> {
+
+    // get the secound part of proof (ID)
+    let proof_id: u128 = proof_code
+        .get((PROOF_LENTGH as usize + 1)..)
+        .ok_or("Proof code too short")?
+        .parse()
+        .map_err(|_| "Invalid proof ID")?;
+
+    let proof_prefix = proof_code
+    .get(0..PROOF_LENTGH as usize)
+    .ok_or("Proof code too short")?
+    .to_string();
+
+    PROOF_MAP.with(|mp|{
+        let mut map=mp.borrow_mut();
+
+        let mut proof = map.get(&proof_id).ok_or("Proof not found")?;
+
+        if proof.is_used {
+            return Err("Proof already used");
+        }
+        if proof.expires_at < ic_cdk::api::time() {
+            return Err("Proof expired");                            
+        }
+
+        let real_hashed_code=proof.code.clone();
+
+        // get the hash of the proof
+        let mut hasher = Sha256::new();
+        hasher.update(proof_prefix.as_bytes());
+        let result = hasher.finalize();
+        let hashed_code = hex::encode(result);
+
+        // compare the value in the Proof the input value
+        if hashed_code != real_hashed_code {    
+            return Err("Proof code mismatch");
+        }
+    
+        proof.is_used = true;
+        map.insert(proof_id, proof.clone());
+        Ok(proof.clone())
+    })
 }
 
 ic_cdk::export_candid!();

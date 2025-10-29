@@ -5,9 +5,15 @@
       "package": "backend",
       "type": "rust",
       "declarations": {
-        "output": "backend/backend.did",
+        "output": "frontend/src/declarations/backend",
         "bindings": ["js", "ts", "did"]
       }
+    },
+    "frontend": {
+      "dependencies": ["backend"],
+      "source": ["frontend/out"],
+      "type": "assets",
+      "workspace": "frontend"
     }
   },
   "defaults": {

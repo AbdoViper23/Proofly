@@ -35,8 +35,8 @@ import {
 } from "@tanstack/react-table"
 
 import { ArrowLeft, Plus, Pencil, Trash2, Building2, ArrowUpDown, ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 // ========== Types ==========
 interface Employee {
@@ -67,9 +67,9 @@ function useSmartBack() {
             const prev = document.referrer || "";
             const sameOrigin = prev.startsWith(window.location.origin);
             if (sameOrigin && window.history.length > 1) router.back();
-            else router.push("/companies");
+            else router.push("/company-management");
         } catch {
-            router.push("/companies");
+            router.push("/company-management");
         }
     };
 }
@@ -373,10 +373,10 @@ function EmployeesTable({
 }
 
 // ========== Page Component ==========
-export default function Page() {
-    const params = useParams();
+function CompanyPageContent() {
+    const searchParams = useSearchParams();
     const handleBack = useSmartBack();
-    const companyId = Number((params as any)?.id);
+    const companyId = Number(searchParams.get('id'));
 
     // Mounted gate
     const [mounted, setMounted] = useState(false);
@@ -573,3 +573,24 @@ export default function Page() {
         </BorderLayout>
     );
 }
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <BorderLayout id="company-page" className="mt-3 border-t">
+                <CrossSVG className="absolute -left-3 -top-3 " />
+                <CrossSVG className="absolute -right-3 -top-3" />
+                <div className="seciton-py">
+                    <div className="max-w-3xl mx-auto px-4">
+                        <div className="h-6 w-40 bg-gray-200 rounded mb-4" />
+                        <div className="h-8 w-64 bg-gray-200 rounded mb-2" />
+                        <div className="h-5 w-48 bg-gray-100 rounded" />
+                    </div>
+                </div>
+            </BorderLayout>
+        }>
+            <CompanyPageContent />
+        </Suspense>
+    );
+}
+

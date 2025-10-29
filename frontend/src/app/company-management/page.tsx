@@ -262,7 +262,7 @@ export default function page() {
                                         <Button variant="secondary" className="gap-1" onClick={() => openEditDialog(item)}>
                                             <Pencil className="size-4" /> Edit
                                         </Button>
-                                        <Link href={`/companies/${item.id}`}>
+                                        <Link href={`/companies?id=${item.id}`}>
                                             <Button variant="default" className="gap-1">
                                                 <Eye className="size-4" /> View
                                             </Button>

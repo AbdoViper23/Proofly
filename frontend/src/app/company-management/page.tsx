@@ -9,6 +9,58 @@ import { Spinner } from "@/components/ui/spinner";
 import { Building2, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Actor, HttpAgent } from '@dfinity/agent'
+import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
+
+// Canister ID from multiple sources with fallbacks
+const CANISTER_ID = 
+    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
+    declaredCanisterId || 
+    'uxrrr-q7777-77774-qaaaq-cai';
+
+// Determine network and host
+const getNetworkConfig = () => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
+    
+    let host;
+    if (network === 'local' || isDevelopment) {
+        host = 'http://localhost:4943';
+    } else {
+        host = 'https://ic0.app';
+    }
+    
+    return { network, host, isDevelopment };
+};
+
+// Create ICP Actor
+const createActor = async () => {
+    try {
+        const { network, host, isDevelopment } = getNetworkConfig();
+        
+        if (!CANISTER_ID) {
+            throw new Error('Backend canister ID not configured.');
+        }
+        
+        const agent = new HttpAgent({ host });
+
+        if (network === 'local' || isDevelopment) {
+            await agent.fetchRootKey().catch(err => {
+                console.warn('Could not fetch root key:', err);
+            });
+        }
+
+        const actor = Actor.createActor(idlFactory, {
+            agent,
+            canisterId: CANISTER_ID,
+        });
+
+        return actor;
+    } catch (error) {
+        console.error('Failed to create actor:', error);
+        throw error instanceof Error ? error : new Error(String(error));
+    }
+};
 
 interface Employee {
     id: string
@@ -18,6 +70,7 @@ interface Employee {
 
 interface Company {
     id: number
+    username: string  // Company username (unique identifier)
     name: string
     image?: string
     employees: Employee[]
@@ -26,33 +79,51 @@ interface Company {
 const STORAGE_KEY = "companies";
 
 const DEFAULT_COMPANIES: Company[] = [
-    { id: 1, name: "Artify Studio", employees: [] },
-    { id: 2, name: "Vision Arts", employees: [], image: "https://placehold.co/600x400" },
+    { id: 1, username: "artify", name: "Artify Studio", employees: [] },
+    { id: 2, username: "vision", name: "Vision Arts", employees: [], image: "https://placehold.co/600x400" },
 ];
 
 export default function page() {
     // Mounted gate to prevent hydration mismatch
     const [mounted, setMounted] = useState(false);
+    const [actor, setActor] = useState<any>(null);
 
     const [companies, setCompanies] = useState<Company[]>([]);
 
-    // Load from localStorage after mount
+    // Load from backend after mount
     useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                setCompanies(JSON.parse(raw) as Company[]);
-            } else {
+        const initAndLoad = async () => {
+            try {
+                // Create actor
+                const icpActor = await createActor();
+                setActor(icpActor);
+                
+                // Load companies from backend (returns array of usernames)
+                const companyUsernames = await icpActor.list_my_admin_companies() as string[];
+                console.log("📥 Company usernames from backend:", companyUsernames);
+                
+                // Convert string[] to Company[]
+                const companiesData: Company[] = companyUsernames.map((username, index) => ({
+                    id: index + 1,
+                    username: username,
+                    name: username,  // Using username as name for now
+                    employees: []
+                }));
+                
+                setCompanies(companiesData);
+            } catch (error) {
+                console.error("Error loading companies:", error);
+                // Fallback to default companies on error
                 setCompanies(DEFAULT_COMPANIES);
+            } finally {
+                setMounted(true);
             }
-        } catch {
-            setCompanies(DEFAULT_COMPANIES);
-        } finally {
-            setMounted(true);
-        }
+        };
+        
+        initAndLoad();
     }, []);
 
-    // Persist to localStorage after mounted
+    // Persist to localStorage after mounted (keeping for now)
     useEffect(() => {
         if (!mounted) return;
         try {
@@ -64,45 +135,76 @@ export default function page() {
     const [open, setOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [form, setForm] = useState({ name: "", image: "" });
+    const [form, setForm] = useState({ username: "", name: "" });
+    const [saving, setSaving] = useState(false);
 
     const openAddDialog = () => {
         setIsEditing(false);
         setEditingId(null);
-        setForm({ name: "", image: "" });
+        setForm({ username: "", name: "" });
         setOpen(true);
     };
 
     const openEditDialog = (c: Company) => {
         setIsEditing(true);
         setEditingId(c.id);
-        setForm({ name: c.name, image: c.image ?? "" });
+        setForm({ username: "", name: c.name });
         setOpen(true);
     };
 
-    const handleSaveCompany = () => {
-        if (!form.name.trim()) return;
+    const handleSaveCompany = async () => {
+        if (!form.name.trim() || !form.username.trim()) {
+            alert("Please fill in all fields");
+            return;
+        }
 
         if (isEditing && editingId !== null) {
+            // TODO: Edit functionality (not implemented in backend yet)
             setCompanies((prev) =>
                 prev.map((c) =>
-                    c.id === editingId ? { ...c, name: form.name.trim(), image: form.image || undefined } : c
+                    c.id === editingId ? { ...c, name: form.name.trim() } : c
                 )
             );
         } else {
-            const newId = (companies.reduce((max, c) => Math.max(max, c.id), 0) || 0) + 1;
-            const newCompany: Company = {
-                id: newId,
-                name: form.name.trim(),
-                image: form.image || undefined,
-                employees: [],
-            };
-            setCompanies((prev) => [...prev, newCompany]);
+            // Add new company via backend
+            if (!actor) {
+                alert("Not connected to backend");
+                return;
+            }
+
+            setSaving(true);
+            try {
+                console.log("📡 Adding new company:", form.username, form.name);
+                const result = await actor.add_new_companey(form.username.trim(), form.name.trim());
+                
+                if ('Ok' in result) {
+                    console.log("✅ Company added successfully");
+                    alert("Company added successfully!");
+                    
+                    // Reload companies from backend
+                    const companyUsernames = await actor.list_my_admin_companies() as string[];
+                    const companiesData: Company[] = companyUsernames.map((username, index) => ({
+                        id: index + 1,
+                        username: username,
+                        name: username,  // Using username as name for now
+                        employees: []
+                    }));
+                    setCompanies(companiesData);
+                } else {
+                    console.error("❌ Error adding company:", result.Err);
+                    alert("Error: " + result.Err);
+                }
+            } catch (error) {
+                console.error("❌ Failed to add company:", error);
+                alert("Failed to add company: " + (error instanceof Error ? error.message : "Unknown error"));
+            } finally {
+                setSaving(false);
+            }
         }
 
         // close dialog
         setOpen(false);
-        setForm({ name: "", image: "" });
+        setForm({ username: "", name: "" });
         setIsEditing(false);
         setEditingId(null);
     };
@@ -196,31 +298,23 @@ export default function page() {
                                 </DialogHeader>
 
                                 <div className="space-y-3">
-                                    {/* <Input
-                                        placeholder="Company Name"
-                                        value={newCompany.name}
-                                        onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                                    />
                                     <Input
-                                        placeholder="Company Image URL (optional)"
-                                        value={newCompany.image}
-                                        onChange={(e) => setNewCompany({ ...newCompany, image: e.target.value })}
+                                        placeholder="Company Username"
+                                        value={form.username}
+                                        onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
                                     />
-                                    <Button onClick={handleAddCompany} className="w-full">
-                                        Add Company
-                                    </Button> */}
                                     <Input
                                         placeholder="Company Name"
                                         value={form.name}
                                         onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
                                     />
-                                    <Input
-                                        placeholder="Company Image URL (optional)"
-                                        value={form.image}
-                                        onChange={(e) => setForm((s) => ({ ...s, image: e.target.value }))}
-                                    />
-                                    <Button type="submit" onClick={handleSaveCompany} className="w-full">
-                                        {isEditing ? "Save Changes" : "Add Company"}
+                                    <Button 
+                                        type="submit" 
+                                        onClick={handleSaveCompany} 
+                                        className="w-full"
+                                        disabled={saving}
+                                    >
+                                        {saving ? "Saving..." : (isEditing ? "Save Changes" : "Add Company")}
                                     </Button>
                                 </div>
                             </DialogContent>
@@ -263,7 +357,7 @@ export default function page() {
                                         <Button variant="secondary" className="gap-1" onClick={() => openEditDialog(item)}>
                                             <Pencil className="size-4" /> Edit
                                         </Button>
-                                        <Link href={`/companies?id=${item.id}`}>
+                                        <Link href={`/companies?username=${item.username}`}>
                                             <Button variant="default" className="gap-1">
                                                 <Eye className="size-4" /> View
                                             </Button>

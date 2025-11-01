@@ -37,6 +37,58 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Building2, ArrowUpDown, ChevronDown } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Actor, HttpAgent } from '@dfinity/agent'
+import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
+
+// Canister ID from multiple sources with fallbacks
+const CANISTER_ID = 
+    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
+    declaredCanisterId || 
+    'uxrrr-q7777-77774-qaaaq-cai';
+
+// Determine network and host
+const getNetworkConfig = () => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
+    
+    let host;
+    if (network === 'local' || isDevelopment) {
+        host = 'http://localhost:4943';
+    } else {
+        host = 'https://ic0.app';
+    }
+    
+    return { network, host, isDevelopment };
+};
+
+// Create ICP Actor
+const createActor = async () => {
+    try {
+        const { network, host, isDevelopment } = getNetworkConfig();
+        
+        if (!CANISTER_ID) {
+            throw new Error('Backend canister ID not configured.');
+        }
+        
+        const agent = new HttpAgent({ host });
+
+        if (network === 'local' || isDevelopment) {
+            await agent.fetchRootKey().catch(err => {
+                console.warn('Could not fetch root key:', err);
+            });
+        }
+
+        const actor = Actor.createActor(idlFactory, {
+            agent,
+            canisterId: CANISTER_ID,
+        });
+
+        return actor;
+    } catch (error) {
+        console.error('Failed to create actor:', error);
+        throw error instanceof Error ? error : new Error(String(error));
+    }
+};
 
 // ========== Types ==========
 interface Employee {
@@ -47,6 +99,7 @@ interface Employee {
 
 interface Company {
     id: number
+    username: string  // Company username (unique identifier)
     name: string
     image?: string
     employees: Employee[]
@@ -376,25 +429,95 @@ function EmployeesTable({
 function CompanyPageContent() {
     const searchParams = useSearchParams();
     const handleBack = useSmartBack();
-    const companyId = Number(searchParams.get('id'));
+    const companyUsername = searchParams.get('username') || '';
 
     // Mounted gate
     const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
+    const [actor, setActor] = useState<any>(null);
+    
+    useEffect(() => {
+        const initActor = async () => {
+            try {
+                const icpActor = await createActor();
+                setActor(icpActor);
+            } catch (error) {
+                console.error('Failed to initialize actor:', error);
+            }
+        };
+        
+        initActor();
+        setMounted(true);
+    }, []);
 
     const [company, setCompany] = useState<Company | null>(null);
+    const [loadingEmployees, setLoadingEmployees] = useState(false);
 
-    // Load company after mount (avoid hydration mismatch)
+    // Load company and employees from backend
     useEffect(() => {
-        if (!mounted) return;
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (!raw) return;
-            const list = JSON.parse(raw) as Company[];
-            const found = list.find((c) => c.id === companyId) || null;
-            setCompany(found);
-        } catch { }
-    }, [mounted, companyId]);
+        if (!mounted || !actor || !companyUsername) return;
+        
+        const loadCompanyData = async () => {
+            setLoadingEmployees(true);
+            try {
+                console.log("📡 Loading employees for company:", companyUsername);
+                
+                // Get employees from backend
+                const employeeIds = await actor.list_company_employess(companyUsername) as string[];
+                console.log("📥 Employee IDs:", employeeIds);
+                
+                // Convert to Employee objects
+                const employees: Employee[] = employeeIds.map(id => ({
+                    id: id,
+                    name: id,  // Using principal ID as name
+                    position: "N/A"  // Position not available from backend yet
+                }));
+                
+                // Create company object
+                const companyData: Company = {
+                    id: 1,
+                    username: companyUsername,
+                    name: companyUsername,  // Using username as name
+                    employees: employees
+                };
+                
+                setCompany(companyData);
+            } catch (error) {
+                console.error("❌ Failed to load employees:", error);
+                
+                // Fallback to localStorage
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (raw) {
+                        const list = JSON.parse(raw) as Company[];
+                        const found = list.find((c) => c.username === companyUsername) || null;
+                        if (found) {
+                            setCompany(found);
+                        } else {
+                            // Create empty company
+                            setCompany({
+                                id: 1,
+                                username: companyUsername,
+                                name: companyUsername,
+                                employees: []
+                            });
+                        }
+                    } else {
+                        // Create empty company
+                        setCompany({
+                            id: 1,
+                            username: companyUsername,
+                            name: companyUsername,
+                            employees: []
+                        });
+                    }
+                } catch { }
+            } finally {
+                setLoadingEmployees(false);
+            }
+        };
+        
+        loadCompanyData();
+    }, [mounted, actor, companyUsername]);
 
     const saveCompany = (next: Company) => {
         try {
@@ -410,63 +533,178 @@ function CompanyPageContent() {
     const [openEmp, setOpenEmp] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingEmpId, setEditingEmpId] = useState<string | null>(null);
-    const [empForm, setEmpForm] = useState({ name: "", position: "" });
+    const [empForm, setEmpForm] = useState({ principalId: "", position: "" });
+    const [saving, setSaving] = useState(false);
 
     const openAddEmp = () => {
         setIsEditing(false);
         setEditingEmpId(null);
-        setEmpForm({ name: "", position: "" });
+        setEmpForm({ principalId: "", position: "" });
         setOpenEmp(true);
     };
 
     const openEditEmp = (emp: Employee) => {
         setIsEditing(true);
         setEditingEmpId(emp.id);
-        setEmpForm({ name: emp.name, position: emp.position });
+        setEmpForm({ principalId: emp.name, position: emp.position });
         setOpenEmp(true);
     };
 
-    const handleSaveEmp = () => {
+    const handleSaveEmp = async () => {
         if (!company) return;
-        if (!empForm.name.trim() || !empForm.position.trim()) return;
-
-        let next: Company;
-
-        if (isEditing && editingEmpId) {
-            next = {
-                ...company,
-                employees: company.employees.map((e) =>
-                    e.id === editingEmpId ? { ...e, name: empForm.name.trim(), position: empForm.position.trim() } : e
-                ),
-            };
-        } else {
-            const newEmp: Employee = {
-                id: genId(),
-                name: empForm.name.trim(),
-                position: empForm.position.trim(),
-            };
-            next = { ...company, employees: [...company.employees, newEmp] };
+        if (!empForm.principalId.trim()) {
+            alert("Please enter employee Principal ID");
+            return;
         }
 
-        saveCompany(next);
+        if (isEditing && editingEmpId) {
+            // TODO: Edit functionality (not implemented in backend yet)
+            const next: Company = {
+                ...company,
+                employees: company.employees.map((e) =>
+                    e.id === editingEmpId ? { ...e, name: empForm.principalId.trim(), position: empForm.position.trim() } : e
+                ),
+            };
+            saveCompany(next);
+        } else {
+            // Add employee via backend
+            if (!actor) {
+                alert("Not connected to backend");
+                return;
+            }
+
+            setSaving(true);
+            try {
+                console.log("📡 Adding employee:", empForm.principalId, "to company:", companyUsername);
+                const result = await actor.add_employee(companyUsername, empForm.principalId.trim());
+                
+                if (result === true) {
+                    console.log("✅ Employee added successfully");
+                    alert("Employee added successfully!");
+                    
+                    // Reload employees from backend
+                    const employeeIds = await actor.list_company_employess(companyUsername) as string[];
+                    const employees: Employee[] = employeeIds.map(id => ({
+                        id: id,
+                        name: id,
+                        position: "N/A"
+                    }));
+                    
+                    const updatedCompany: Company = {
+                        ...company,
+                        employees: employees
+                    };
+                    setCompany(updatedCompany);
+                    saveCompany(updatedCompany);
+                } else {
+                    console.error("❌ Failed to add employee");
+                    alert("Failed to add employee");
+                }
+            } catch (error) {
+                console.error("❌ Error adding employee:", error);
+                alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
+            } finally {
+                setSaving(false);
+            }
+        }
 
         setOpenEmp(false);
         setIsEditing(false);
         setEditingEmpId(null);
-        setEmpForm({ name: "", position: "" });
+        setEmpForm({ principalId: "", position: "" });
     };
 
-    const handleDeleteEmp = (id: string) => {
+    const handleDeleteEmp = async (id: string) => {
         if (!company) return;
         if (!confirm("Are you sure you want to delete this employee?")) return;
-        const next = { ...company, employees: company.employees.filter((e) => e.id !== id) };
-        saveCompany(next);
+        
+        if (!actor) {
+            alert("Not connected to backend");
+            return;
+        }
+
+        try {
+            console.log("📡 Deleting employee:", id, "from company:", companyUsername);
+            const result = await actor.remove_employee(companyUsername, id);
+            
+            if (result === true) {
+                console.log("✅ Employee deleted successfully");
+                
+                // Reload employees from backend
+                const employeeIds = await actor.list_company_employess(companyUsername) as string[];
+                const employees: Employee[] = employeeIds.map(empId => ({
+                    id: empId,
+                    name: empId,
+                    position: "N/A"
+                }));
+                
+                const updatedCompany: Company = {
+                    ...company,
+                    employees: employees
+                };
+                setCompany(updatedCompany);
+                saveCompany(updatedCompany);
+            } else {
+                console.error("❌ Failed to delete employee");
+                alert("Failed to delete employee");
+            }
+        } catch (error) {
+            console.error("❌ Error deleting employee:", error);
+            alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
+        }
     };
 
-    const handleBulkDelete = (ids: string[]) => {
+    const handleBulkDelete = async (ids: string[]) => {
         if (!company) return;
-        const next = { ...company, employees: company.employees.filter((e) => !ids.includes(e.id)) };
-        saveCompany(next);
+        if (!confirm(`Are you sure you want to delete ${ids.length} employee(s)?`)) return;
+        
+        if (!actor) {
+            alert("Not connected to backend");
+            return;
+        }
+
+        try {
+            console.log("📡 Bulk deleting employees:", ids);
+            
+            // Delete each employee
+            let successCount = 0;
+            for (const id of ids) {
+                try {
+                    const result = await actor.remove_employee(companyUsername, id);
+                    if (result === true) {
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.error(`❌ Failed to delete employee ${id}:`, error);
+                }
+            }
+            
+            console.log(`✅ Successfully deleted ${successCount}/${ids.length} employees`);
+            
+            if (successCount > 0) {
+                // Reload employees from backend
+                const employeeIds = await actor.list_company_employess(companyUsername) as string[];
+                const employees: Employee[] = employeeIds.map(empId => ({
+                    id: empId,
+                    name: empId,
+                    position: "N/A"
+                }));
+                
+                const updatedCompany: Company = {
+                    ...company,
+                    employees: employees
+                };
+                setCompany(updatedCompany);
+                saveCompany(updatedCompany);
+                
+                alert(`Successfully deleted ${successCount} employee(s)`);
+            } else {
+                alert("Failed to delete employees");
+            }
+        } catch (error) {
+            console.error("❌ Error during bulk delete:", error);
+            alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
+        }
     };
 
     // Skeleton during mount
@@ -537,12 +775,19 @@ function CompanyPageContent() {
 
                     {/* Employees DataTable */}
                     <div className="">
-                        <EmployeesTable
-                            data={company.employees}
-                            onEdit={openEditEmp}
-                            onDelete={handleDeleteEmp}
-                            onBulkDelete={handleBulkDelete}
-                        />
+                        {loadingEmployees ? (
+                            <div className="text-center py-8">
+                                <div className="animate-spin w-8 h-8 border-2 border-gray-300 border-t-gray-900 rounded-full mx-auto mb-4"></div>
+                                <p className="text-gray-600">Loading employees...</p>
+                            </div>
+                        ) : (
+                            <EmployeesTable
+                                data={company.employees}
+                                onEdit={openEditEmp}
+                                onDelete={handleDeleteEmp}
+                                onBulkDelete={handleBulkDelete}
+                            />
+                        )}
                     </div>
                 </div>
             </div>
@@ -555,17 +800,21 @@ function CompanyPageContent() {
                     </DialogHeader>
                     <div className="space-y-3">
                         <Input
-                            placeholder="Name"
-                            value={empForm.name}
-                            onChange={(e) => setEmpForm((s) => ({ ...s, name: e.target.value }))}
+                            placeholder="Employee Principal ID"
+                            value={empForm.principalId}
+                            onChange={(e) => setEmpForm((s) => ({ ...s, principalId: e.target.value }))}
                         />
                         <Input
-                            placeholder="Position"
+                            placeholder="Position (optional)"
                             value={empForm.position}
                             onChange={(e) => setEmpForm((s) => ({ ...s, position: e.target.value }))}
                         />
-                        <Button className="w-full" onClick={handleSaveEmp}>
-                            {isEditing ? "Save Changes" : "Add Employee"}
+                        <Button 
+                            className="w-full" 
+                            onClick={handleSaveEmp}
+                            disabled={saving}
+                        >
+                            {saving ? "Adding..." : (isEditing ? "Save Changes" : "Add Employee")}
                         </Button>
                     </div>
                 </DialogContent>

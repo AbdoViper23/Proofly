@@ -10,7 +10,6 @@
       }
     },
     "frontend": {
-      "dependencies": ["backend"],
       "source": ["frontend/out"],
       "type": "assets",
       "workspace": "frontend"
@@ -22,6 +21,6 @@
       "packtool": ""
     }
   },
-  "output_env_file": ".env",
+  "output_env_file": "frontend/.env.local",
   "version": 1
 }

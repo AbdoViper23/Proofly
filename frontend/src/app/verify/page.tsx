@@ -12,13 +12,78 @@ import { LoadingSwap } from '@/components/ui/loading-swap'
 import { BadgeCheck, CheckIcon, CircleX, Clock, CopyIcon, ShieldCheck } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { toastManager } from '@/components/ui/toast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Actor, HttpAgent } from '@dfinity/agent'
+import { idlFactory } from '@/declarations/backend'
 
+// Types matching the backend Candid interface
+interface Proof {
+    code: string;
+    company_id: string;
+    employee_id: string;
+    created_at: bigint;
+    expires_at: bigint;
+    is_used: boolean;
+}
+
+type Result<T> = { Ok: T } | { Err: string };
+
+// Canister ID from environment
+const CANISTER_ID = process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || '';
+
+// Determine network and host
+const getNetworkConfig = () => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
+    
+    let host;
+    if (network === 'local' || isDevelopment) {
+        host = 'http://localhost:4943';
+    } else {
+        host = 'https://ic0.app';
+    }
+    
+    return { network, host, isDevelopment };
+};
+
+// Create ICP Actor
+const createActor = async () => {
+    try {
+        const { network, host, isDevelopment } = getNetworkConfig();
+        
+        
+        if (!CANISTER_ID) {
+            throw new Error('Backend canister ID not configured. Please ensure the backend is deployed.');
+        }
+        
+        // Create an agent
+        const agent = new HttpAgent({ host });
+
+        // In development/local, fetch the root key
+        if (network === 'local' || isDevelopment) {
+            await agent.fetchRootKey().catch(err => {
+                console.warn('Could not fetch root key:', err);
+                throw new Error('Failed to fetch root key. Is dfx running?');
+            });
+        }
+
+        // Create the actor
+        const actor = Actor.createActor(idlFactory, {
+            agent,
+            canisterId: CANISTER_ID,
+        });
+
+        return actor;
+    } catch (error) {
+        console.error('Failed to create actor:', error);
+        throw error instanceof Error ? error : new Error(String(error));
+    }
+};
 
 const proofCodeSchema = z.object({
     proofCode: z.string().min(1, "Proof code is required"),
@@ -27,6 +92,10 @@ type proofCodeFormData = z.infer<typeof proofCodeSchema>
 
 export default function page() {
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
+    const [actor, setActor] = useState<any>(null)
+    const [proofData, setProofData] = useState<Proof | null>(null)
+    const [connecting, setConnecting] = useState(true)
+    const [connectionError, setConnectionError] = useState<string | null>(null)
 
     const form = useForm<proofCodeFormData>({
         resolver: zodResolver(proofCodeSchema),
@@ -37,7 +106,38 @@ export default function page() {
     })
     const { isSubmitting } = form.formState
 
+    // Initialize ICP actor
+    useEffect(() => {
+        const initActor = async () => {
+            try {
+                setConnecting(true)
+                setConnectionError(null)
+                const icpActor = await createActor()
+                setActor(icpActor)
+            } catch (error) {
+                console.error('❌ Failed to initialize actor:', error)
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+                setConnectionError(errorMessage)
+            } finally {
+                setConnecting(false)
+            }
+        }
+
+        initActor()
+    }, [])
+
     const onSubmit = async (data: proofCodeFormData) => {
+        
+        if (!actor) {
+            toastManager.add({
+                title: "Connection Error",
+                description: "Not connected to backend. Please refresh the page.",
+                type: "error",
+                timeout: 3000,
+            })
+            return
+        }
+
         let id: string | undefined
         try {
             id = toastManager.add({
@@ -45,28 +145,42 @@ export default function page() {
                 type: "loading",
             })
 
-            await new Promise((resolve) => setTimeout(resolve, 2000)) // simulate delay
+            // Call backend verify_proof function
+            const result: Result<Proof> = await actor.verify_proof(data.proofCode)
+            
             toastManager.close(id)
 
-            if (data.proofCode === "123456") {
+            if ('Ok' in result) {
+                // Success - proof is valid
+                setProofData(result.Ok)
+                setStatus("success")
                 toastManager.add({
                     title: "Proof code verified",
-                    description: `Proof code "${data.proofCode}" is valid.`,
+                    description: `Proof code is valid.`,
                     type: "success",
                     timeout: 2000,
                 })
-                setStatus("success")
             } else {
+                // Error - proof is invalid
+                setStatus("error")
                 toastManager.add({
                     title: "Invalid proof code",
-                    description: "The proof code you entered is incorrect.",
+                    description: result.Err,
                     type: "error",
                     timeout: 3000,
                 })
-                setStatus("error")
             }
         } catch (err: any) {
+            console.error("❌ Verification Error:", err);
+            console.error("Error details:", {
+                message: err.message,
+                name: err.name,
+                stack: err.stack,
+                fullError: err
+            });
+            
             if (id) toastManager.close(id)
+            setStatus("error")
             toastManager.add({
                 title: "Verification failed",
                 description: err.message || "Something went wrong while verifying the code.",
@@ -76,6 +190,42 @@ export default function page() {
         }
     }
 
+
+    // Show connecting state
+    if (connecting) {
+        return (
+            <BorderLayout id='verify-page' className='mt-3 border-t'>
+                <div className="seciton-py flex items-center justify-center min-h-[50vh]">
+                    <div className="text-center">
+                        <div className="animate-spin w-12 h-12 border-4 border-gray-300 border-t-gray-900 rounded-full mx-auto mb-4"></div>
+                        <p className="text-gray-600">Connecting to backend...</p>
+                    </div>
+                </div>
+            </BorderLayout>
+        )
+    }
+
+    // Show connection error state
+    if (connectionError) {
+        return (
+            <BorderLayout id='verify-page' className='mt-3 border-t'>
+                <div className="seciton-py flex items-center justify-center min-h-[50vh]">
+                    <Card className="max-w-md">
+                        <CardContent>
+                            <div className="text-center">
+                                <CircleX className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Connection Error</h3>
+                                <p className="text-gray-600 mb-4">{connectionError}</p>
+                                <Button onClick={() => window.location.reload()}>
+                                    Retry Connection
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </BorderLayout>
+        )
+    }
 
     return (
         <BorderLayout id='verify-page' className='mt-3 border-t'>
@@ -137,7 +287,7 @@ export default function page() {
                                                     <LoadingSwap isLoading={isSubmitting}>Verify Proof Code</LoadingSwap>
                                                 </Button>
                                             </Field>
-                                            {status === "success" && (
+                                            {status === "success" && proofData && (
 
                                                 <Card className='w-full bg-[#F4F4F4] rounded-md shadow border border-gray relative '>
                                                     <span className="absolute size-1.5 bg-[#C8D4DD] rounded-full left-[7px] top-[7px]" />
@@ -150,12 +300,11 @@ export default function page() {
                                                             {/* user */}
                                                             <div className="flex items-center gap-3 flex-wrap">
                                                                 <Avatar className='size-10 shrink-0'>
-                                                                    {/* <AvatarImage src="https://github.com/shadcn.png" /> */}
-                                                                    <AvatarFallback>JD</AvatarFallback>
+                                                                    <AvatarFallback>{proofData.employee_id.substring(0, 2).toUpperCase()}</AvatarFallback>
                                                                 </Avatar>
                                                                 <div>
-                                                                    <h6 className="text-lg font-semibold text-gray-900 font-matter leading-none">John Doe</h6>
-                                                                    <p className="text-sm text-gray-600 leading-none">Software Engineer</p>
+                                                                    <h6 className="text-lg font-semibold text-gray-900 font-matter leading-none">Employee ID</h6>
+                                                                    <p className="text-sm text-gray-600 leading-none break-all">{proofData.employee_id}</p>
                                                                 </div>
                                                             </div>
                                                             {/* company */}
@@ -163,7 +312,7 @@ export default function page() {
                                                                 <Badge
                                                                     variant="secondary"
                                                                 >
-                                                                    Google
+                                                                    {proofData.company_id}
                                                                 </Badge>
                                                             </div>
                                                         </div>

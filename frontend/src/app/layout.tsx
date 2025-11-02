@@ -3,6 +3,7 @@ import "../styles/globals.css";
 import { calSemibold, geistMono, geistSans, inter, matter, robotoMono } from "../../public/fonts";
 import { ToastProvider } from "@/components/ui/toast";
 import Footer from "@/components/sections/Footer";
+import ConditionalNavbar from "@/components/layout/ConditionalNavbar";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -20,6 +21,7 @@ export default function RootLayout({
         className={`${calSemibold.variable} ${matter.variable} ${inter.variable} ${robotoMono.variable} ${geistSans.variable} ${geistMono.variable} antialiased light`}
       >
         <ToastProvider>
+          <ConditionalNavbar />
           {children}
           <Footer />
         </ToastProvider>

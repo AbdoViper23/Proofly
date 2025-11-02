@@ -12,98 +12,109 @@ import { LoadingSwap } from '@/components/ui/loading-swap'
 import { BadgeCheck, CheckIcon, ChevronDownIcon, Clock, CopyIcon, ShieldCheck } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { toastManager } from '@/components/ui/toast'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Actor, HttpAgent } from '@dfinity/agent'
+import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
+
+// Canister ID from multiple sources with fallbacks
+const CANISTER_ID = 
+    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
+    declaredCanisterId || 
+    'uxrrr-q7777-77774-qaaaq-cai';
+
+// Determine network and host
+const getNetworkConfig = () => {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
+    
+    let host;
+    if (network === 'local' || isDevelopment) {
+        host = 'http://localhost:4943';
+    } else {
+        host = 'https://ic0.app';
+    }
+    
+    return { network, host, isDevelopment };
+};
+
+// Create ICP Actor
+const createActor = async () => {
+    try {
+        const { network, host, isDevelopment } = getNetworkConfig();
+        
+        if (!CANISTER_ID) {
+            throw new Error('Backend canister ID not configured.');
+        }
+        
+        const agent = new HttpAgent({ host });
+
+        if (network === 'local' || isDevelopment) {
+            await agent.fetchRootKey().catch(err => {
+            });
+        }
+
+        const actor = Actor.createActor(idlFactory, {
+            agent,
+            canisterId: CANISTER_ID,
+        });
+
+        return actor;
+    } catch (error) {
+        throw error instanceof Error ? error : new Error(String(error));
+    }
+};
 
 
 const generateProofCodeSchema = z.object({
-    generateProofCode: z.string().min(1, "Proof code is required"),
+    company: z.string().min(1, "Please select a company"),
 })
 type generateProofCodeFormData = z.infer<typeof generateProofCodeSchema>
 
-const frameworks = [
-    {
-        value: "next.js",
-        label: "Next.js",
-    },
-    {
-        value: "sveltekit",
-        label: "SvelteKit",
-    },
-    {
-        value: "nuxt.js",
-        label: "Nuxt.js",
-    },
-    {
-        value: "remix",
-        label: "Remix",
-    },
-    {
-        value: "astro",
-        label: "Astro",
-    },
-    {
-        value: "angular",
-        label: "Angular",
-    },
-    {
-        value: "vue",
-        label: "Vue.js",
-    },
-    {
-        value: "react",
-        label: "React",
-    },
-    {
-        value: "ember",
-        label: "Ember.js",
-    },
-    {
-        value: "gatsby",
-        label: "Gatsby",
-    },
-    {
-        value: "eleventy",
-        label: "Eleventy",
-    },
-    {
-        value: "solid",
-        label: "SolidJS",
-    },
-    {
-        value: "preact",
-        label: "Preact",
-    },
-    {
-        value: "qwik",
-        label: "Qwik",
-    },
-    {
-        value: "alpine",
-        label: "Alpine.js",
-    },
-    {
-        value: "lit",
-        label: "Lit",
-    },
-]
-
 export default function page() {
-    const [isTrue, setIsTrue] = useState(false)
+    const [actor, setActor] = useState<any>(null)
+    const [companies, setCompanies] = useState<string[]>([])
+    const [loading, setLoading] = useState(true)
+    const [generatedProof, setGeneratedProof] = useState<string>("")
     const [copied, setCopied] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
-    const id = "verifiedCode"
     const [open, setOpen] = useState<boolean>(false)
-    const [value, setValue] = useState<string>("")
+    const [selectedCompany, setSelectedCompany] = useState<string>("")
+    
+    // Initialize actor and load companies
+    useEffect(() => {
+        const initAndLoad = async () => {
+            try {
+                setLoading(true);
+                const icpActor = await createActor();
+                setActor(icpActor);
+                
+                // Load companies from backend
+                const companyList = await icpActor.list_my_companies() as string[];
+                setCompanies(companyList);
+            } catch (error) {
+                toastManager.add({
+                    title: "Connection Error",
+                    description: error instanceof Error ? error.message : "Failed to connect to backend",
+                    type: "error",
+                    timeout: 3000,
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        initAndLoad();
+    }, [])
 
     const form = useForm<generateProofCodeFormData>({
         resolver: zodResolver(generateProofCodeSchema),
         mode: 'all',
         defaultValues: {
-            generateProofCode: ""
+            company: ""
         },
     })
     const { isSubmitting } = form.formState
@@ -117,41 +128,69 @@ export default function page() {
     }
 
     const onSubmit = async (data: generateProofCodeFormData) => {
+        if (!actor) {
+            toastManager.add({
+                title: "Connection Error",
+                description: "Not connected to backend. Please refresh the page.",
+                type: "error",
+                timeout: 3000,
+            });
+            return;
+        }
+
+        if (!selectedCompany) {
+            toastManager.add({
+                title: "No Company Selected",
+                description: "Please select a company first.",
+                type: "error",
+                timeout: 3000,
+            });
+            return;
+        }
+
         let id: string | undefined;
 
         try {
             id = toastManager.add({
-                title: "Verifying proof code...",
+                title: "Generating proof...",
                 type: "loading",
             });
 
-            // simulate backend verification delay
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            const result = await actor.generate_proof(selectedCompany);
 
             toastManager.close(id);
 
-            if (data.generateProofCode === "next.js") {
+            // Check if Result is Ok or Err
+            if (result && 'Ok' in result) {
+                const proofCode = result.Ok;
+                setGeneratedProof(proofCode);
                 toastManager.add({
-                    title: "Proof code verified",
-                    description: `Proof code "${data.generateProofCode}" is valid.`,
+                    title: "Proof Generated Successfully",
+                    description: "Your proof code has been generated.",
                     type: "success",
                     timeout: 2000,
                 });
-                setIsTrue(true)
+            } else if (result && 'Err' in result) {
+                const errorMsg = result.Err;
+                toastManager.add({
+                    title: "Generation Failed",
+                    description: errorMsg || "Failed to generate proof.",
+                    type: "error",
+                    timeout: 3000,
+                });
             } else {
                 toastManager.add({
-                    title: "Invalid proof code",
-                    description: "The proof code you entered is incorrect.",
+                    title: "Generation Failed",
+                    description: "Unexpected response from backend.",
                     type: "error",
                     timeout: 3000,
                 });
             }
         } catch (err: any) {
             if (id) toastManager.close(id);
-
             toastManager.add({
-                title: "Verification failed",
-                description: err.message || "Something went wrong while verifying the code.",
+                title: "Generation Failed",
+                description: err.message || "Something went wrong while generating the proof.",
                 type: "error",
                 timeout: 3000,
             });
@@ -182,9 +221,9 @@ export default function page() {
                     <div className="w-full flex justify-center flex-col items-center gap-6">
                         <Card className="w-full max-w-xl shadow-md">
                             <CardHeader className='text-start'>
-                                <CardTitle>Enter Proof Code</CardTitle>
+                                <CardTitle>Generate Proof</CardTitle>
                                 <CardDescription>
-                                    Proof codes are in the format: COMPANY_ID-EMPLOYEE_ID-TIMESTAMP
+                                    Select a company you work for to generate your employment proof
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -193,25 +232,23 @@ export default function page() {
                                         <FieldGroup className='gap-4'>
                                             <Controller
                                                 control={form.control}
-                                                name="generateProofCode"
+                                                name="company"
                                                 render={({ field, fieldState }) => (
                                                     <Field data-invalid={fieldState.invalid}>
                                                         <div className="flex items-center">
-                                                            <FieldLabel htmlFor="generateProofCode">Proof Code  <span className="text-destructive">*</span></FieldLabel>
+                                                            <FieldLabel htmlFor="company">Select Company  <span className="text-destructive">*</span></FieldLabel>
                                                         </div>
                                                         <Popover open={open} onOpenChange={setOpen}>
                                                             <PopoverTrigger asChild>
                                                                 <Button
-                                                                    id={id}
                                                                     variant="outline"
                                                                     role="combobox"
                                                                     aria-expanded={open}
                                                                     className="w-full justify-between border-input bg-background px-3 font-normal outline-offset-0 outline-none hover:bg-background focus-visible:outline-[3px]"
+                                                                    disabled={loading}
                                                                 >
-                                                                    <span className={cn("truncate", !value && "text-muted-foreground")}>
-                                                                        {value
-                                                                            ? frameworks.find((framework) => framework.value === value)?.label
-                                                                            : "Select proof code"}
+                                                                    <span className={cn("truncate", !selectedCompany && "text-muted-foreground")}>
+                                                                        {selectedCompany || (loading ? "Loading companies..." : "Select company")}
                                                                     </span>
                                                                     <ChevronDownIcon
                                                                         size={16}
@@ -225,22 +262,22 @@ export default function page() {
                                                                 align="start"
                                                             >
                                                                 <Command>
-                                                                    <CommandInput placeholder="Search proof code..." />
+                                                                    <CommandInput placeholder="Search company..." />
                                                                     <CommandList>
-                                                                        <CommandEmpty>No proof code found.</CommandEmpty>
+                                                                        <CommandEmpty>No company found.</CommandEmpty>
                                                                         <CommandGroup>
-                                                                            {frameworks.map((framework) => (
+                                                                            {companies.map((company) => (
                                                                                 <CommandItem
-                                                                                    key={framework.value}
-                                                                                    value={framework.value}
+                                                                                    key={company}
+                                                                                    value={company}
                                                                                     onSelect={(currentValue) => {
-                                                                                        setValue(currentValue)
+                                                                                        setSelectedCompany(currentValue)
                                                                                         setOpen(false)
-                                                                                        form.setValue("generateProofCode", currentValue)
+                                                                                        form.setValue("company", currentValue)
                                                                                       }}
                                                                                 >
-                                                                                    {framework.label}
-                                                                                    {value === framework.value && (
+                                                                                    {company}
+                                                                                    {selectedCompany === company && (
                                                                                         <CheckIcon size={16} className="ml-auto" />
                                                                                     )}
                                                                                 </CommandItem>
@@ -257,20 +294,20 @@ export default function page() {
                                                 )}
                                             />
                                             <Field>
-                                                <Button form="generateProofCode" type="submit" disabled={isSubmitting} className="w-full">
-                                                    <LoadingSwap isLoading={isSubmitting}>Verify Proof Code</LoadingSwap>
+                                                <Button form="generateProofCode" type="submit" disabled={isSubmitting || loading} className="w-full">
+                                                    <LoadingSwap isLoading={isSubmitting}>Generate Proof</LoadingSwap>
                                                 </Button>
                                             </Field>
-                                            {isTrue && (
+                                            {generatedProof && (
                                                 <div className="*:not-first:mt-2">
-                                                    <Label htmlFor={id}>Copy to clipboard</Label>
+                                                    <Label htmlFor="verifiedCode">Your Proof Code</Label>
                                                     <div className="relative">
                                                         <Input
                                                             ref={inputRef}
-                                                            id={id}
+                                                            id="verifiedCode"
                                                             className="pe-9"
                                                             type="text"
-                                                            defaultValue="pnpm install origin-ui"
+                                                            value={generatedProof}
                                                             readOnly
                                                         />
                                                         <TooltipProvider delayDuration={0}>

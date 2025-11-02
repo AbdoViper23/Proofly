@@ -1,19 +1,20 @@
-type Proof = record {
-  is_used : bool;
-  code : text;
+type CompanyEmployee = record { position : text; employee_id : text };
+type ProofResult = record {
+  employee_name : text;
+  company_name : text;
   created_at : nat64;
+  position : text;
   company_id : text;
-  expires_at : nat64;
   employee_id : text;
 };
 type Result = variant { Ok; Err : text };
 type Result_1 = variant { Ok : text; Err : text };
-type Result_2 = variant { Ok : Proof; Err : text };
+type Result_2 = variant { Ok : ProofResult; Err : text };
 service : {
-  add_employee : (text, text) -> (bool);
+  add_employee : (text, text, text) -> (bool);
   add_new_companey : (text, text) -> (Result);
   generate_proof : (text) -> (Result_1);
-  list_company_employess : (text) -> (vec text) query;
+  list_company_employess : (text) -> (vec CompanyEmployee) query;
   list_my_admin_companies : () -> (vec text) query;
   list_my_companies : () -> (vec text) query;
   remove_employee : (text, text) -> (bool);

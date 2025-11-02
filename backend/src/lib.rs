@@ -127,7 +127,7 @@ impl BoundedStorable for IDList {
 }
 
 impl BoundedStorable for CompanyEmployeeList {
-    const MAX_SIZE: u32 = 2048;
+    const MAX_SIZE: u32 = 1024;
     const IS_FIXED_SIZE: bool = false;
 }
 
@@ -173,9 +173,20 @@ struct Proof {
     code: String,
     company_id: String,
     employee_id: String,
+    position: String,
     created_at: u64,
     expires_at: u64,
     is_used: bool,
+}
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct ProofResult {
+    pub company_id: String,
+    pub company_name: String,
+    pub employee_id: String,
+    pub employee_name: String,
+    pub position: String,
+    pub created_at: u64,
 }
 
 async fn generate_random_code(length: usize) -> String {
@@ -232,6 +243,19 @@ async fn generate_proof(company_id:String) -> Result<String, &'static str> {
         return Err("Caller is not works in this company");
     }
 
+    // Get employee's position in this company
+    let position = COMPANY_EMPLOYEES.with(|map| {
+        let map_ref = map.borrow();
+        let comp_key = StorableString { value: company_id.clone() };
+        
+        if let Some(emp_list) = map_ref.get(&comp_key) {
+            if let Some(emp) = emp_list.employees.iter().find(|e| e.employee_id == user_id) {
+                return emp.position.clone();
+            }
+        }
+        String::from("Employee") // Default position if not found
+    });
+
     let random_code = generate_random_code(PROOF_LENTGH as usize).await;
     let now = ic_cdk::api::time();
 
@@ -252,6 +276,7 @@ async fn generate_proof(company_id:String) -> Result<String, &'static str> {
         code: hashed_code,
         company_id: company_id.clone(),
         employee_id: user_id.clone(),
+        position: position,
         created_at: now,
         expires_at: now + (24 * 60 * 60 * 1_000_000_000),
         is_used: false,
@@ -428,7 +453,7 @@ fn remove_employee(comp_id:String,emp_id:String,)->bool{
 }
 
 #[ic_cdk::update]
-fn verify_proof(proof_code: String) -> Result<Proof, &'static str> {
+fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
 
     // get the secound part of proof (ID)
     let proof_id: u128 = proof_code
@@ -464,7 +489,40 @@ fn verify_proof(proof_code: String) -> Result<Proof, &'static str> {
     
         proof.is_used = true;
         map.insert(proof_id, proof.clone());
-        Ok(proof.clone())
+        
+        // Get company name from COMPANY_MAP
+        let company_name = COMPANY_MAP.with(|comp_map| {
+            let comp_map_ref = comp_map.borrow();
+            let comp_key = StorableString { value: proof.company_id.clone() };
+            
+            if let Some(company) = comp_map_ref.get(&comp_key) {
+                company.name.clone()
+            } else {
+                proof.company_id.clone() // Fallback to company ID if not found
+            }
+        });
+        
+        // Get employee name from EMPLOYEE_MAP
+        let employee_name = EMPLOYEE_MAP.with(|emp_map| {
+            let emp_map_ref = emp_map.borrow();
+            let emp_key = StorableString { value: proof.employee_id.clone() };
+            
+            if let Some(employee) = emp_map_ref.get(&emp_key) {
+                employee.full_name.clone()
+            } else {
+                proof.employee_id.clone() // Fallback to employee ID if not found
+            }
+        });
+        
+        // Return ProofResult with complete information
+        Ok(ProofResult {
+            company_id: proof.company_id,
+            company_name: company_name,
+            employee_id: proof.employee_id,
+            employee_name: employee_name,
+            position: proof.position,
+            created_at: proof.created_at,
+        })
     })
 }
 

@@ -11,7 +11,7 @@ thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<StorableString, IDList, Memory>> = RefCell::new(
+    static COMPANY_EMPLOYEES: RefCell<StableBTreeMap<StorableString, CompanyEmployeeList, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))) // compID -> arr of empID
     );
 
@@ -38,8 +38,19 @@ thread_local! {
 pub struct StorableString {
     pub value: String,
 }
+
+#[derive(CandidType, Deserialize, Clone)]
+pub struct CompanyEmployee {
+    pub employee_id: String,
+    pub position: String,
+}
+
 pub struct IDList {
     pub ids: Vec<String>,
+}
+
+pub struct CompanyEmployeeList {
+    pub employees: Vec<CompanyEmployee>,
 }
 
 
@@ -51,6 +62,18 @@ impl Storable for IDList {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self {
             ids: Decode!(bytes.as_ref(), Vec<String>).unwrap(),
+        }
+    }
+}
+
+impl Storable for CompanyEmployeeList {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(&self.employees).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self {
+            employees: Decode!(bytes.as_ref(), Vec<CompanyEmployee>).unwrap(),
         }
     }
 }
@@ -100,6 +123,11 @@ impl Storable for StorableString {
 
 impl BoundedStorable for IDList {
     const MAX_SIZE: u32 = 1024;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl BoundedStorable for CompanyEmployeeList {
+    const MAX_SIZE: u32 = 2048;
     const IS_FIXED_SIZE: bool = false;
 }
 
@@ -271,7 +299,7 @@ fn list_my_admin_companies() -> Vec<String> {
 
 
 #[ic_cdk::query]
-fn list_company_employess(comp_id:String) -> Vec<String> {
+fn list_company_employess(comp_id:String) -> Vec<CompanyEmployee> {
     let caller_principal = ic_cdk::caller();
     
     // Check if caller is admin of this company
@@ -287,14 +315,14 @@ fn list_company_employess(comp_id:String) -> Vec<String> {
     COMPANY_EMPLOYEES.with(|map| {
         let map_ref = map.borrow();
         match map_ref.get(&user_id) {
-            Some(id_list) => id_list.ids.clone(),
+            Some(emp_list) => emp_list.employees.clone(),
             None => Vec::new(),
         }
     })
 }
 
 #[ic_cdk::update]
-fn add_employee(comp_id:String,emp_id:String)->bool{
+fn add_employee(comp_id:String, emp_id:String, position:String)->bool{
     let caller_principal = ic_cdk::caller();
 
     if !is_company_admin(&caller_principal.to_text(), &comp_id) {
@@ -308,12 +336,26 @@ fn add_employee(comp_id:String,emp_id:String)->bool{
         let comp_key = StorableString { value: comp_id.clone() };
        
         if let Some(mut emp_list) = map.get(&comp_key) {
-            if !emp_list.ids.contains(&emp_id) {
-                emp_list.ids.push(emp_id.clone());
-                map.insert(comp_key, emp_list);
+            // Check if employee already exists
+            if let Some(existing) = emp_list.employees.iter_mut().find(|e| e.employee_id == emp_id) {
+                // Update position if employee exists
+                existing.position = position.clone(); // ToDo add multiple positions positions for one employee
+            } else {
+                // Add new employee
+                emp_list.employees.push(CompanyEmployee {
+                    employee_id: emp_id.clone(),
+                    position: position.clone(),
+                });
             }
+            map.insert(comp_key, emp_list);
         } else {
-            let new_list = IDList { ids: vec![emp_id.clone()] };
+            // Create new employee list
+            let new_list = CompanyEmployeeList {
+                employees: vec![CompanyEmployee {
+                    employee_id: emp_id.clone(),
+                    position: position.clone(),
+                }],
+            };
             map.insert(comp_key, new_list);
         }
     });
@@ -351,8 +393,8 @@ fn remove_employee(comp_id:String,emp_id:String,)->bool{
         let comp_key = StorableString { value: comp_id.clone() };
        
         if let Some(mut emp_list) = map.get(&comp_key) {
-            if let Some(pos) = emp_list.ids.iter().position(|id| id == &emp_id) {
-                emp_list.ids.remove(pos);
+            if let Some(pos) = emp_list.employees.iter().position(|e| e.employee_id == emp_id) {
+                emp_list.employees.remove(pos);
                 map.insert(comp_key, emp_list);
                 return true;
             } else {

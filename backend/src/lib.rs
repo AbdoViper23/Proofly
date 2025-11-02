@@ -272,6 +272,14 @@ fn list_my_admin_companies() -> Vec<String> {
 
 #[ic_cdk::query]
 fn list_company_employess(comp_id:String) -> Vec<String> {
+    let caller_principal = ic_cdk::caller();
+    
+    // Check if caller is admin of this company
+    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
+        ic_cdk::println!("Caller is not admin for this company.");
+        return Vec::new();  // Return empty list if not admin , ToDo : return error
+    }
+    
     let user_id = StorableString {
         value :comp_id,
     };

@@ -17,56 +17,7 @@ import { cn } from '@/lib/utils'
 import { toastManager } from '@/components/ui/toast'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { Actor, HttpAgent } from '@dfinity/agent'
-import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
-
-// Canister ID from multiple sources with fallbacks
-const CANISTER_ID = 
-    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
-    declaredCanisterId || 
-    'uxrrr-q7777-77774-qaaaq-cai';
-
-// Determine network and host
-const getNetworkConfig = () => {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
-    
-    let host;
-    if (network === 'local' || isDevelopment) {
-        host = 'http://localhost:4943';
-    } else {
-        host = 'https://ic0.app';
-    }
-    
-    return { network, host, isDevelopment };
-};
-
-// Create ICP Actor
-const createActor = async () => {
-    try {
-        const { network, host, isDevelopment } = getNetworkConfig();
-        
-        if (!CANISTER_ID) {
-            throw new Error('Backend canister ID not configured.');
-        }
-        
-        const agent = new HttpAgent({ host });
-
-        if (network === 'local' || isDevelopment) {
-            await agent.fetchRootKey().catch(err => {
-            });
-        }
-
-        const actor = Actor.createActor(idlFactory, {
-            agent,
-            canisterId: CANISTER_ID,
-        });
-
-        return actor;
-    } catch (error) {
-        throw error instanceof Error ? error : new Error(String(error));
-    }
-};
+import { useICPActor } from '@/hooks/useICPActor'
 
 
 const generateProofCodeSchema = z.object({
@@ -75,40 +26,40 @@ const generateProofCodeSchema = z.object({
 type generateProofCodeFormData = z.infer<typeof generateProofCodeSchema>
 
 export default function page() {
-    const [actor, setActor] = useState<any>(null)
     const [companies, setCompanies] = useState<string[]>([])
-    const [loading, setLoading] = useState(true)
+    const [loadingCompanies, setLoadingCompanies] = useState(true)
     const [generatedProof, setGeneratedProof] = useState<string>("")
     const [copied, setCopied] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
     const [open, setOpen] = useState<boolean>(false)
     const [selectedCompany, setSelectedCompany] = useState<string>("")
     
-    // Initialize actor and load companies
+    // Initialize ICP Actor using custom hook
+    const { actor, loading: connecting, error: connectionError } = useICPActor()
+    
+    // Load companies when actor is ready
     useEffect(() => {
-        const initAndLoad = async () => {
+        const loadCompanies = async () => {
+            if (!actor) return;
+            
             try {
-                setLoading(true);
-                const icpActor = await createActor();
-                setActor(icpActor);
-                
-                // Load companies from backend
-                const companyList = await icpActor.list_my_companies() as string[];
+                setLoadingCompanies(true);
+                const companyList = await actor.list_my_companies() as string[];
                 setCompanies(companyList);
             } catch (error) {
                 toastManager.add({
-                    title: "Connection Error",
-                    description: error instanceof Error ? error.message : "Failed to connect to backend",
+                    title: "Failed to Load Companies",
+                    description: error instanceof Error ? error.message : "Failed to load companies",
                     type: "error",
                     timeout: 3000,
                 });
             } finally {
-                setLoading(false);
+                setLoadingCompanies(false);
             }
         };
         
-        initAndLoad();
-    }, [])
+        loadCompanies();
+    }, [actor])
 
     const form = useForm<generateProofCodeFormData>({
         resolver: zodResolver(generateProofCodeSchema),
@@ -245,10 +196,10 @@ export default function page() {
                                                                     role="combobox"
                                                                     aria-expanded={open}
                                                                     className="w-full justify-between border-input bg-background px-3 font-normal outline-offset-0 outline-none hover:bg-background focus-visible:outline-[3px]"
-                                                                    disabled={loading}
+                                                                    disabled={loadingCompanies || connecting}
                                                                 >
                                                                     <span className={cn("truncate", !selectedCompany && "text-muted-foreground")}>
-                                                                        {selectedCompany || (loading ? "Loading companies..." : "Select company")}
+                                                                        {selectedCompany || (loadingCompanies ? "Loading companies..." : "Select company")}
                                                                     </span>
                                                                     <ChevronDownIcon
                                                                         size={16}
@@ -294,7 +245,7 @@ export default function page() {
                                                 )}
                                             />
                                             <Field>
-                                                <Button form="generateProofCode" type="submit" disabled={isSubmitting || loading} className="w-full">
+                                                <Button form="generateProofCode" type="submit" disabled={isSubmitting || loadingCompanies || connecting} className="w-full">
                                                     <LoadingSwap isLoading={isSubmitting}>Generate Proof</LoadingSwap>
                                                 </Button>
                                             </Field>

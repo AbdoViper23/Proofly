@@ -37,73 +37,8 @@ import {
 import { ArrowLeft, Plus, Pencil, Trash2, Building2, ArrowUpDown, ChevronDown } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Actor, HttpAgent } from '@dfinity/agent'
-import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
-
-// Canister ID from multiple sources with fallbacks
-const CANISTER_ID = 
-    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
-    declaredCanisterId || 
-    'uxrrr-q7777-77774-qaaaq-cai';
-
-// Determine network and host
-const getNetworkConfig = () => {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
-    
-    let host;
-    if (network === 'local' || isDevelopment) {
-        host = 'http://localhost:4943';
-    } else {
-        host = 'https://ic0.app';
-    }
-    
-    return { network, host, isDevelopment };
-};
-
-// Create ICP Actor
-const createActor = async () => {
-    try {
-        const { network, host, isDevelopment } = getNetworkConfig();
-        
-        if (!CANISTER_ID) {
-            throw new Error('Backend canister ID not configured.');
-        }
-        
-        const agent = new HttpAgent({ host });
-
-        if (network === 'local' || isDevelopment) {
-            await agent.fetchRootKey().catch(err => {
-                console.warn('Could not fetch root key:', err);
-            });
-        }
-
-        const actor = Actor.createActor(idlFactory, {
-            agent,
-            canisterId: CANISTER_ID,
-        });
-
-        return actor;
-    } catch (error) {
-        console.error('Failed to create actor:', error);
-        throw error instanceof Error ? error : new Error(String(error));
-    }
-};
-
-// ========== Types ==========
-interface Employee {
-    id: string
-    name: string
-    position: string
-}
-
-interface Company {
-    id: number
-    username: string  // Company username (unique identifier)
-    name: string
-    image?: string
-    employees: Employee[]
-}
+import { useICPActor } from '@/hooks/useICPActor'
+import type { Company, Employee } from '@/types/backend'
 
 // ========== Local storage utils ==========
 const STORAGE_KEY = "companies";
@@ -433,24 +368,16 @@ function CompanyPageContent() {
 
     // Mounted gate
     const [mounted, setMounted] = useState(false);
-    const [actor, setActor] = useState<any>(null);
     
-    useEffect(() => {
-        const initActor = async () => {
-            try {
-                const icpActor = await createActor();
-                setActor(icpActor);
-            } catch (error) {
-                console.error('Failed to initialize actor:', error);
-            }
-        };
-        
-        initActor();
-        setMounted(true);
-    }, []);
+    // Initialize ICP Actor using custom hook
+    const { actor, loading: connecting, error: connectionError } = useICPActor();
 
     const [company, setCompany] = useState<Company | null>(null);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Load company and employees from backend
     useEffect(() => {
@@ -459,11 +386,8 @@ function CompanyPageContent() {
         const loadCompanyData = async () => {
             setLoadingEmployees(true);
             try {
-                console.log("📡 Loading employees for company:", companyUsername);
-                
                 // Get employees from backend
                 const employeeIds = await actor.list_company_employess(companyUsername) as string[];
-                console.log("📥 Employee IDs:", employeeIds);
                 
                 // Convert to Employee objects
                 const employees: Employee[] = employeeIds.map(id => ({
@@ -477,12 +401,12 @@ function CompanyPageContent() {
                     id: 1,
                     username: companyUsername,
                     name: companyUsername,  // Using username as name
+                    image: "",
                     employees: employees
                 };
                 
                 setCompany(companyData);
             } catch (error) {
-                console.error("❌ Failed to load employees:", error);
                 
                 // Fallback to localStorage
                 try {
@@ -575,11 +499,9 @@ function CompanyPageContent() {
 
             setSaving(true);
             try {
-                console.log("📡 Adding employee:", empForm.principalId, "to company:", companyUsername);
                 const result = await actor.add_employee(companyUsername, empForm.principalId.trim());
                 
                 if (result === true) {
-                    console.log("✅ Employee added successfully");
                     alert("Employee added successfully!");
                     
                     // Reload employees from backend
@@ -597,11 +519,9 @@ function CompanyPageContent() {
                     setCompany(updatedCompany);
                     saveCompany(updatedCompany);
                 } else {
-                    console.error("❌ Failed to add employee");
                     alert("Failed to add employee");
                 }
             } catch (error) {
-                console.error("❌ Error adding employee:", error);
                 alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
             } finally {
                 setSaving(false);
@@ -624,12 +544,9 @@ function CompanyPageContent() {
         }
 
         try {
-            console.log("📡 Deleting employee:", id, "from company:", companyUsername);
             const result = await actor.remove_employee(companyUsername, id);
             
             if (result === true) {
-                console.log("✅ Employee deleted successfully");
-                
                 // Reload employees from backend
                 const employeeIds = await actor.list_company_employess(companyUsername) as string[];
                 const employees: Employee[] = employeeIds.map(empId => ({
@@ -645,11 +562,9 @@ function CompanyPageContent() {
                 setCompany(updatedCompany);
                 saveCompany(updatedCompany);
             } else {
-                console.error("❌ Failed to delete employee");
                 alert("Failed to delete employee");
             }
         } catch (error) {
-            console.error("❌ Error deleting employee:", error);
             alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
         }
     };
@@ -664,8 +579,6 @@ function CompanyPageContent() {
         }
 
         try {
-            console.log("📡 Bulk deleting employees:", ids);
-            
             // Delete each employee
             let successCount = 0;
             for (const id of ids) {
@@ -675,11 +588,9 @@ function CompanyPageContent() {
                         successCount++;
                     }
                 } catch (error) {
-                    console.error(`❌ Failed to delete employee ${id}:`, error);
+                    // Silently continue with next employee
                 }
             }
-            
-            console.log(`✅ Successfully deleted ${successCount}/${ids.length} employees`);
             
             if (successCount > 0) {
                 // Reload employees from backend
@@ -702,7 +613,6 @@ function CompanyPageContent() {
                 alert("Failed to delete employees");
             }
         } catch (error) {
-            console.error("❌ Error during bulk delete:", error);
             alert("Error: " + (error instanceof Error ? error.message : "Unknown error"));
         }
     };

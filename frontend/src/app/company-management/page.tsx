@@ -9,72 +9,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Building2, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Actor, HttpAgent } from '@dfinity/agent'
-import { idlFactory, canisterId as declaredCanisterId } from '@/declarations/backend'
-
-// Canister ID from multiple sources with fallbacks
-const CANISTER_ID = 
-    process.env.NEXT_PUBLIC_CANISTER_ID_BACKEND || 
-    declaredCanisterId || 
-    'uxrrr-q7777-77774-qaaaq-cai';
-
-// Determine network and host
-const getNetworkConfig = () => {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const network = process.env.NEXT_PUBLIC_DFX_NETWORK || (isDevelopment ? 'local' : 'ic');
-    
-    let host;
-    if (network === 'local' || isDevelopment) {
-        host = 'http://localhost:4943';
-    } else {
-        host = 'https://ic0.app';
-    }
-    
-    return { network, host, isDevelopment };
-};
-
-// Create ICP Actor
-const createActor = async () => {
-    try {
-        const { network, host, isDevelopment } = getNetworkConfig();
-        
-        if (!CANISTER_ID) {
-            throw new Error('Backend canister ID not configured.');
-        }
-        
-        const agent = new HttpAgent({ host });
-
-        if (network === 'local' || isDevelopment) {
-            await agent.fetchRootKey().catch(err => {
-                console.warn('Could not fetch root key:', err);
-            });
-        }
-
-        const actor = Actor.createActor(idlFactory, {
-            agent,
-            canisterId: CANISTER_ID,
-        });
-
-        return actor;
-    } catch (error) {
-        console.error('Failed to create actor:', error);
-        throw error instanceof Error ? error : new Error(String(error));
-    }
-};
-
-interface Employee {
-    id: string
-    name: string
-    position: string
-}
-
-interface Company {
-    id: number
-    username: string  // Company username (unique identifier)
-    name: string
-    image?: string
-    employees: Employee[]
-}
+import { useICPActor } from '@/hooks/useICPActor'
+import type { Company } from '@/types/backend'
 
 const STORAGE_KEY = "companies";
 
@@ -86,42 +22,44 @@ const DEFAULT_COMPANIES: Company[] = [
 export default function page() {
     // Mounted gate to prevent hydration mismatch
     const [mounted, setMounted] = useState(false);
-    const [actor, setActor] = useState<any>(null);
-
     const [companies, setCompanies] = useState<Company[]>([]);
+    const [loadingCompanies, setLoadingCompanies] = useState(true);
+    
+    // Initialize ICP Actor using custom hook
+    const { actor, loading: connecting, error: connectionError } = useICPActor();
 
-    // Load from backend after mount
+    // Load companies from backend after actor is ready
     useEffect(() => {
-        const initAndLoad = async () => {
+        const loadCompanies = async () => {
+            if (!actor) return;
+            
             try {
-                // Create actor
-                const icpActor = await createActor();
-                setActor(icpActor);
+                setLoadingCompanies(true);
                 
                 // Load companies from backend (returns array of usernames)
-                const companyUsernames = await icpActor.list_my_admin_companies() as string[];
-                console.log("📥 Company usernames from backend:", companyUsernames);
+                const companyUsernames = await actor.list_my_admin_companies() as string[];
                 
                 // Convert string[] to Company[]
                 const companiesData: Company[] = companyUsernames.map((username, index) => ({
                     id: index + 1,
                     username: username,
                     name: username,  // Using username as name for now
+                    image: "",
                     employees: []
                 }));
                 
                 setCompanies(companiesData);
             } catch (error) {
-                console.error("Error loading companies:", error);
                 // Fallback to default companies on error
                 setCompanies(DEFAULT_COMPANIES);
             } finally {
+                setLoadingCompanies(false);
                 setMounted(true);
             }
         };
         
-        initAndLoad();
-    }, []);
+        loadCompanies();
+    }, [actor]);
 
     // Persist to localStorage after mounted (keeping for now)
     useEffect(() => {
@@ -174,11 +112,9 @@ export default function page() {
 
             setSaving(true);
             try {
-                console.log("📡 Adding new company:", form.username, form.name);
                 const result = await actor.add_new_companey(form.username.trim(), form.name.trim());
                 
                 if ('Ok' in result) {
-                    console.log("✅ Company added successfully");
                     alert("Company added successfully!");
                     
                     // Reload companies from backend
@@ -191,11 +127,9 @@ export default function page() {
                     }));
                     setCompanies(companiesData);
                 } else {
-                    console.error("❌ Error adding company:", result.Err);
                     alert("Error: " + result.Err);
                 }
             } catch (error) {
-                console.error("❌ Failed to add company:", error);
                 alert("Failed to add company: " + (error instanceof Error ? error.message : "Unknown error"));
             } finally {
                 setSaving(false);

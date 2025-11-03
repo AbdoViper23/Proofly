@@ -29,6 +29,7 @@ type proofCodeFormData = z.infer<typeof proofCodeSchema>
 export default function page() {
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
     const [proofData, setProofData] = useState<ProofResult | null>(null)
+    const [errorMessage, setErrorMessage] = useState<string>("")
     
     // Initialize ICP Actor using custom hook
     const { actor, loading: connecting, error: connectionError } = useICPActor()
@@ -70,6 +71,7 @@ export default function page() {
                 // Success - proof is valid
                 setProofData(result.Ok)
                 setStatus("success")
+                setErrorMessage("")
                 toastManager.add({
                     title: "Proof code verified",
                     description: `Proof code is valid.`,
@@ -79,8 +81,10 @@ export default function page() {
             } else {
                 // Error - proof is invalid
                 setStatus("error")
+                setErrorMessage(result.Err)
+                setProofData(null)
                 toastManager.add({
-                    title: "Invalid proof code",
+                    title: "Verification Failed",
                     description: result.Err,
                     type: "error",
                     timeout: 3000,
@@ -89,9 +93,12 @@ export default function page() {
         } catch (err: any) {
             if (id) toastManager.close(id)
             setStatus("error")
+            const errorMsg = err.message || "Something went wrong while verifying the code."
+            setErrorMessage(errorMsg)
+            setProofData(null)
             toastManager.add({
                 title: "Verification failed",
-                description: err.message || "Something went wrong while verifying the code.",
+                description: errorMsg,
                 type: "error",
                 timeout: 3000,
             })
@@ -241,13 +248,18 @@ export default function page() {
                                                     <span className="absolute size-1.5 bg-[#C8D4DD] rounded-full right-[7px] bottom-[7px]" />
 
                                                     <CardContent>
-                                                        <Empty className='p-1 gap-0'>
+                                                        <Empty className='p-1 gap-2'>
                                                             <EmptyHeader>
                                                                 <EmptyMedia className='mb-1' variant="icon">
                                                                     <CircleX className='text-destructive' />
                                                                 </EmptyMedia>
-                                                                <EmptyTitle className='text-lg text-gray-900 font-matter leading-none'>User not found</EmptyTitle>
+                                                                <EmptyTitle className='text-lg text-gray-900 font-matter leading-none'>Verification Failed</EmptyTitle>
                                                             </EmptyHeader>
+                                                            <EmptyContent>
+                                                                <EmptyDescription className='text-sm text-gray-600'>
+                                                                    {errorMessage || "Invalid proof code"}
+                                                                </EmptyDescription>
+                                                            </EmptyContent>
                                                         </Empty>
                                                     </CardContent>
                                                 </Card>

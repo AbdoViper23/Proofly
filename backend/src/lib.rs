@@ -479,9 +479,6 @@ fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
 
         let mut proof = map.get(&proof_id).ok_or("Proof not found")?;
 
-        if proof.is_used {
-            return Err("Proof already used");
-        }
         if proof.expires_at < ic_cdk::api::time() {
             return Err("Proof expired");                            
         }
@@ -497,6 +494,11 @@ fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
         // compare the value in the Proof the input value
         if hashed_code != real_hashed_code {    
             return Err("Proof code mismatch");
+        }
+
+        // check if proof is already
+        if proof.is_used {
+            return Err("Proof already used");
         }
     
         proof.is_used = true;

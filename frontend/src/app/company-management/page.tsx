@@ -69,78 +69,133 @@ export default function page() {
         } catch { }
     }, [companies, mounted]);
 
-    // Dialog state
-    const [open, setOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [form, setForm] = useState({ username: "", name: "" });
-    const [saving, setSaving] = useState(false);
+    // Add Dialog state
+    const [openAdd, setOpenAdd] = useState(false);
+    const [addForm, setAddForm] = useState({ username: "", name: "" });
+    const [savingAdd, setSavingAdd] = useState(false);
+    const [usernameError, setUsernameError] = useState("");
+
+    // Edit Dialog state
+    const [openEdit, setOpenEdit] = useState(false);
+    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+    const [editForm, setEditForm] = useState({ username: "", name: "" });
+    const [editMode, setEditMode] = useState<"name" | "username" | "both">("both");
+    const [savingEdit, setSavingEdit] = useState(false);
 
     const openAddDialog = () => {
-        setIsEditing(false);
-        setEditingId(null);
-        setForm({ username: "", name: "" });
-        setOpen(true);
+        setAddForm({ username: "", name: "" });
+        setUsernameError("");
+        setOpenAdd(true);
+    };
+
+    const validateUsername = (username: string): boolean => {
+        // Check if username contains only lowercase letters, numbers, hyphens, and underscores
+        const validPattern = /^[a-z0-9_-]*$/;
+        return validPattern.test(username);
     };
 
     const openEditDialog = (c: Company) => {
-        setIsEditing(true);
-        setEditingId(c.id);
-        setForm({ username: "", name: c.name });
-        setOpen(true);
+        setEditingCompany(c);
+        setEditForm({ username: c.username, name: c.name });
+        setEditMode("both");
+        setOpenEdit(true);
     };
 
-    const handleSaveCompany = async () => {
-        if (!form.name.trim() || !form.username.trim()) {
+    const closeAddDialog = () => {
+        setOpenAdd(false);
+        setAddForm({ username: "", name: "" });
+        setUsernameError("");
+    };
+
+    const closeEditDialog = () => {
+        setOpenEdit(false);
+        setEditingCompany(null);
+        setEditForm({ username: "", name: "" });
+        setEditMode("both");
+    };
+
+    const handleAddCompany = async () => {
+        if (!addForm.name.trim() || !addForm.username.trim()) {
             alert("Please fill in all fields");
             return;
         }
 
-        if (isEditing && editingId !== null) {
-            // TODO: Edit functionality (not implemented in backend yet)
-            setCompanies((prev) =>
-                prev.map((c) =>
-                    c.id === editingId ? { ...c, name: form.name.trim() } : c
-                )
-            );
-        } else {
-            // Add new company via backend
-            if (!actor) {
-                alert("Not connected to backend");
+        if (!validateUsername(addForm.username)) {
+            setUsernameError("Username can only contain lowercase letters, numbers, hyphens (-), and underscores (_). No spaces or special characters allowed.");
+            return;
+        }
+
+        if (!actor) {
+            alert("Not connected to backend");
+            return;
+        }
+
+        setSavingAdd(true);
+        try {
+            const result = await actor.add_new_companey(addForm.username.trim(), addForm.name.trim());
+            
+            if ('Ok' in result) {
+                alert("Company added successfully!");
+                
+                // Reload companies from backend
+                const companyUsernames = await actor.list_my_admin_companies() as string[];
+                const companiesData: Company[] = companyUsernames.map((username, index) => ({
+                    id: index + 1,
+                    username: username,
+                    name: username,  // Using username as name for now
+                    employees: []
+                }));
+                setCompanies(companiesData);
+                closeAddDialog();
+            } else {
+                alert("Error: " + result.Err);
+            }
+        } catch (error) {
+            alert("Failed to add company: " + (error instanceof Error ? error.message : "Unknown error"));
+        } finally {
+            setSavingAdd(false);
+        }
+    };
+
+    const handleEditCompany = async () => {
+        if (!editingCompany) return;
+
+        // Validate based on edit mode
+        if (editMode === "name" || editMode === "both") {
+            if (!editForm.name.trim()) {
+                alert("Please enter company name");
                 return;
             }
-
-            setSaving(true);
-            try {
-                const result = await actor.add_new_companey(form.username.trim(), form.name.trim());
-                
-                if ('Ok' in result) {
-                    alert("Company added successfully!");
-                    
-                    // Reload companies from backend
-                    const companyUsernames = await actor.list_my_admin_companies() as string[];
-                    const companiesData: Company[] = companyUsernames.map((username, index) => ({
-                        id: index + 1,
-                        username: username,
-                        name: username,  // Using username as name for now
-                        employees: []
-                    }));
-                    setCompanies(companiesData);
-                } else {
-                    alert("Error: " + result.Err);
-                }
-            } catch (error) {
-                alert("Failed to add company: " + (error instanceof Error ? error.message : "Unknown error"));
-            } finally {
-                setSaving(false);
+        }
+        if (editMode === "username" || editMode === "both") {
+            if (!editForm.username.trim()) {
+                alert("Please enter company username");
+                return;
             }
         }
 
-        // close dialog
-        setOpen(false);
-        setForm({ username: "", name: "" });
-        setIsEditing(false);
-        setEditingId(null);
+        // TODO: Edit functionality (not implemented in backend yet)
+        // For now, update locally
+        setSavingEdit(true);
+        try {
+            setCompanies((prev) =>
+                prev.map((c) =>
+                    c.id === editingCompany.id 
+                        ? { 
+                            ...c, 
+                            name: editMode === "name" || editMode === "both" ? editForm.name.trim() : c.name,
+                            username: editMode === "username" || editMode === "both" ? editForm.username.trim() : c.username
+                          } 
+                        : c
+                )
+            );
+            alert("Company updated successfully!");
+            closeEditDialog();
+        } catch (error) {
+            alert("Failed to update company: " + (error instanceof Error ? error.message : "Unknown error"));
+        } finally {
+            setSavingEdit(false);
+        }
     };
 
     const handleDeleteCompany = (id: number) => {
@@ -218,37 +273,56 @@ export default function page() {
 
                     {/* Add Company Button */}
                     <div className="flex justify-center mb-8">
-                        <Dialog open={open} onOpenChange={setOpen}>
+                        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
                             <DialogTrigger asChild>
-                                <Button className="gap-2">
+                                <Button className="gap-2" onClick={openAddDialog}>
                                     <Plus className="size-4" /> Add Company
                                 </Button>
                             </DialogTrigger>
 
                             <DialogContent className="sm:max-w-[400px]">
                                 <DialogHeader>
-                                    {/* <DialogTitle>Add New Company</DialogTitle> */}
-                                    <DialogTitle>{isEditing ? "Edit Company" : "Add New Company"}</DialogTitle>
+                                    <DialogTitle>Add New Company</DialogTitle>
                                 </DialogHeader>
 
                                 <div className="space-y-3">
-                                    <Input
-                                        placeholder="Company Username"
-                                        value={form.username}
-                                        onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
-                                    />
-                                    <Input
-                                        placeholder="Company Name"
-                                        value={form.name}
-                                        onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
-                                    />
+                                    <div>
+                                        <label className="text-sm font-medium mb-1 block">Company Name</label>
+                                        <Input
+                                            placeholder="Enter company name"
+                                            value={addForm.name}
+                                            onChange={(e) => setAddForm((s) => ({ ...s, name: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium mb-1 block">Company Username</label>
+                                        <Input
+                                            placeholder="Enter company username"
+                                            value={addForm.username}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                setAddForm((s) => ({ ...s, username: value }));
+                                                
+                                                // Validate and show error if invalid
+                                                if (value && !validateUsername(value)) {
+                                                    setUsernameError("Only lowercase letters, numbers, hyphens (-), and underscores (_) are allowed");
+                                                } else {
+                                                    setUsernameError("");
+                                                }
+                                            }}
+                                            className={usernameError ? "border-red-500" : ""}
+                                        />
+                                        {usernameError && (
+                                            <p className="text-xs text-red-500 mt-1">{usernameError}</p>
+                                        )}
+                                    </div>
                                     <Button 
                                         type="submit" 
-                                        onClick={handleSaveCompany} 
+                                        onClick={handleAddCompany} 
                                         className="w-full"
-                                        disabled={saving}
+                                        disabled={savingAdd}
                                     >
-                                        {saving ? "Saving..." : (isEditing ? "Save Changes" : "Add Company")}
+                                        {savingAdd ? "Adding..." : "Add Company"}
                                     </Button>
                                 </div>
                             </DialogContent>
@@ -311,6 +385,97 @@ export default function page() {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Company Dialog */}
+            <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+                <DialogContent className="sm:max-w-[450px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Company</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {/* Edit Mode Selection */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">What do you want to edit?</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                <Button
+                                    type="button"
+                                    variant={editMode === "name" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setEditMode("name")}
+                                    className="w-full"
+                                >
+                                    Name
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={editMode === "username" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setEditMode("username")}
+                                    className="w-full"
+                                >
+                                    Username
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant={editMode === "both" ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setEditMode("both")}
+                                    className="w-full"
+                                >
+                                    Both
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Edit Fields */}
+                        <div className="space-y-3">
+                            {(editMode === "username" || editMode === "both") && (
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Company Username</label>
+                                    <Input
+                                        placeholder="Enter company username"
+                                        value={editForm.username}
+                                        onChange={(e) => setEditForm((s) => ({ ...s, username: e.target.value }))}
+                                    />
+                                </div>
+                            )}
+                            
+                            {(editMode === "name" || editMode === "both") && (
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Company Name</label>
+                                    <Input
+                                        placeholder="Enter company name"
+                                        value={editForm.name}
+                                        onChange={(e) => setEditForm((s) => ({ ...s, name: e.target.value }))}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                            <Button 
+                                type="button"
+                                variant="outline"
+                                onClick={closeEditDialog}
+                                className="flex-1"
+                                disabled={savingEdit}
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                type="submit" 
+                                onClick={handleEditCompany} 
+                                className="flex-1"
+                                disabled={savingEdit}
+                            >
+                                {savingEdit ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </BorderLayout>
     )
 

@@ -171,7 +171,7 @@ struct Employee {
 #[derive(CandidType, Deserialize, Clone)]
 struct Proof {
     code: String,
-    company_id: String,
+    company_username: String,
     employee_id: String,
     position: String,
     created_at: u64,
@@ -181,7 +181,7 @@ struct Proof {
 
 #[derive(CandidType, Deserialize, Clone)]
 pub struct ProofResult {
-    pub company_id: String,
+    pub company_username: String,
     pub company_name: String,
     pub employee_id: String,
     pub employee_name: String,
@@ -209,44 +209,44 @@ async fn generate_random_code(length: usize) -> String {
     result
 }
 
-fn is_company_admin(admin_principal: &String, company_id: &String) -> bool {
+fn is_company_admin(admin_principal: &String, company_username: &String) -> bool {
     let admin_key = StorableString { value: admin_principal.clone() };
 
     EMPLOYEE_COMPANIES_ADMIN.with(|comp| {
         let map = comp.borrow();
         if let Some(comp_list) = map.get(&admin_key) {
-            return comp_list.ids.contains(company_id);
+            return comp_list.ids.contains(company_username);
         }
         false
     })
 }
 
-fn is_works_on(user_id: &String, company_id: &String) -> bool {
+fn is_works_on(user_id: &String, company_username: &String) -> bool {
     let user_key = StorableString { value: user_id.clone() };
 
     EMPLOYEE_COMPANIES.with(|comp| {
         let map = comp.borrow();
         if let Some(comp_list) = map.get(&user_key) {
-            return comp_list.ids.contains(company_id);
+            return comp_list.ids.contains(company_username);
         }
         false
     })
 }
 
 #[ic_cdk::update]
-async fn generate_proof(company_id:String) -> Result<String, &'static str> {
+async fn generate_proof(company_username:String) -> Result<String, &'static str> {
     let caller_principal = ic_cdk::caller();
     let user_id: String = caller_principal.to_text();
 
-    //cheack if user_id works in company_id or not
-    if !is_works_on(&user_id,&company_id) {
+    //check if user_id works in company_username or not
+    if !is_works_on(&user_id,&company_username) {
         return Err("Caller is not works in this company");
     }
 
     // Get employee's position in this company
     let position = COMPANY_EMPLOYEES.with(|map| {
         let map_ref = map.borrow();
-        let comp_key = StorableString { value: company_id.clone() };
+        let comp_key = StorableString { value: company_username.clone() };
         
         if let Some(emp_list) = map_ref.get(&comp_key) {
             if let Some(emp) = emp_list.employees.iter().find(|e| e.employee_id == user_id) {
@@ -274,7 +274,7 @@ async fn generate_proof(company_id:String) -> Result<String, &'static str> {
 
     let cur_proof=Proof {
         code: hashed_code,
-        company_id: company_id.clone(),
+        company_username: company_username.clone(),
         employee_id: user_id.clone(),
         position: position,
         created_at: now,
@@ -322,24 +322,37 @@ fn list_my_admin_companies() -> Vec<String> {
     })
 }
 
+#[ic_cdk::query]
+fn get_company_name(comp_username: String) -> Result<String, &'static str> {
+    let storable_comp_username = StorableString { value: comp_username };
+    
+    COMPANY_MAP.with(|map| {
+        let map_ref = map.borrow();
+        match map_ref.get(&storable_comp_username) {
+            Some(company) => Ok(company.name.clone()),
+            None => Err("Company not found"),
+        }
+    })
+}
+
 
 #[ic_cdk::query]
-fn list_company_employess(comp_id:String) -> Vec<CompanyEmployee> {
+fn list_company_employess(comp_username:String) -> Vec<CompanyEmployee> {
     let caller_principal = ic_cdk::caller();
     
     // Check if caller is admin of this company
-    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
+    if !is_company_admin(&caller_principal.to_text(), &comp_username) {
         ic_cdk::println!("Caller is not admin for this company.");
         return Vec::new();  // Return empty list if not admin , ToDo : return error
     }
     
-    let user_id = StorableString {
-        value :comp_id,
+    let comp_key = StorableString {
+        value :comp_username,
     };
     
     COMPANY_EMPLOYEES.with(|map| {
         let map_ref = map.borrow();
-        match map_ref.get(&user_id) {
+        match map_ref.get(&comp_key) {
             Some(emp_list) => emp_list.employees.clone(),
             None => Vec::new(),
         }
@@ -347,10 +360,10 @@ fn list_company_employess(comp_id:String) -> Vec<CompanyEmployee> {
 }
 
 #[ic_cdk::update]
-fn add_employee(comp_id:String, emp_id:String, position:String)->bool{
+fn add_employee(comp_username:String, emp_id:String, position:String)->bool{
     let caller_principal = ic_cdk::caller();
 
-    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
+    if !is_company_admin(&caller_principal.to_text(), &comp_username) {
         ic_cdk::println!("Caller is not admin for this company.");
         return false;
     }
@@ -358,7 +371,7 @@ fn add_employee(comp_id:String, emp_id:String, position:String)->bool{
     // Add employee to COMPANY_EMPLOYEES (company -> employees)
     COMPANY_EMPLOYEES.with(|comp|{
         let mut map=comp.borrow_mut();
-        let comp_key = StorableString { value: comp_id.clone() };
+        let comp_key = StorableString { value: comp_username.clone() };
        
         if let Some(mut emp_list) = map.get(&comp_key) {
             // Check if employee already exists
@@ -391,12 +404,12 @@ fn add_employee(comp_id:String, emp_id:String, position:String)->bool{
         let emp_key = StorableString { value: emp_id.clone() };
        
         if let Some(mut comp_list) = map.get(&emp_key) {
-            if !comp_list.ids.contains(&comp_id) {
-                comp_list.ids.push(comp_id.clone());
+            if !comp_list.ids.contains(&comp_username) {
+                comp_list.ids.push(comp_username.clone());
                 map.insert(emp_key, comp_list);
             }
         } else {
-            let new_list = IDList { ids: vec![comp_id.clone()] };
+            let new_list = IDList { ids: vec![comp_username.clone()] };
             map.insert(emp_key, new_list);
         }
     });
@@ -405,9 +418,9 @@ fn add_employee(comp_id:String, emp_id:String, position:String)->bool{
 }
 
 #[ic_cdk::update]
-fn remove_employee(comp_id:String,emp_id:String,)->bool{
+fn remove_employee(comp_username:String,emp_id:String,)->bool{
     let caller_principal = ic_cdk::caller();
-    if !is_company_admin(&caller_principal.to_text(), &comp_id) {
+    if !is_company_admin(&caller_principal.to_text(), &comp_username) {
         ic_cdk::println!("Caller is not admin for this company.");
         return false;
     }
@@ -415,7 +428,7 @@ fn remove_employee(comp_id:String,emp_id:String,)->bool{
     // Remove employee from COMPANY_EMPLOYEES (company -> employees)
     let removed_from_company = COMPANY_EMPLOYEES.with(|comp|{
         let mut map=comp.borrow_mut();
-        let comp_key = StorableString { value: comp_id.clone() };
+        let comp_key = StorableString { value: comp_username.clone() };
        
         if let Some(mut emp_list) = map.get(&comp_key) {
             if let Some(pos) = emp_list.employees.iter().position(|e| e.employee_id == emp_id) {
@@ -442,7 +455,7 @@ fn remove_employee(comp_id:String,emp_id:String,)->bool{
         let emp_key = StorableString { value: emp_id.clone() };
        
         if let Some(mut comp_list) = map.get(&emp_key) {
-            if let Some(pos) = comp_list.ids.iter().position(|id| id == &comp_id) {
+            if let Some(pos) = comp_list.ids.iter().position(|id| id == &comp_username) {
                 comp_list.ids.remove(pos);
                 map.insert(emp_key, comp_list);
             }
@@ -493,12 +506,12 @@ fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
         // Get company name from COMPANY_MAP
         let company_name = COMPANY_MAP.with(|comp_map| {
             let comp_map_ref = comp_map.borrow();
-            let comp_key = StorableString { value: proof.company_id.clone() };
+            let comp_key = StorableString { value: proof.company_username.clone() };
             
             if let Some(company) = comp_map_ref.get(&comp_key) {
                 company.name.clone()
             } else {
-                proof.company_id.clone() // Fallback to company ID if not found
+                proof.company_username.clone() // Fallback to company username if not found
             }
         });
         
@@ -516,7 +529,7 @@ fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
         
         // Return ProofResult with complete information
         Ok(ProofResult {
-            company_id: proof.company_id,
+            company_username: proof.company_username,
             company_name: company_name,
             employee_id: proof.employee_id,
             employee_name: employee_name,
@@ -579,6 +592,105 @@ fn add_new_companey(comp_username:String, comp_name:String)->Result<(), &'static
 
     Ok(())
 
+}
+
+#[ic_cdk::update]
+fn edit_company(comp_username: String, new_comp_name: String) -> Result<(), &'static str> {
+    let caller_principal = ic_cdk::caller();
+    let storable_comp_username = StorableString { value: comp_username.clone() };
+
+    // Check if company exists and caller is admin
+    COMPANY_MAP.with(|mp| {
+        let mut map = mp.borrow_mut();
+        
+        if let Some(mut company) = map.get(&storable_comp_username) {
+            // Verify caller is the admin
+            if company.admin_id != caller_principal.to_string() {
+                return Err("Only company admin can edit company details");
+            }
+            
+            // Update company name
+            company.name = new_comp_name;
+            map.insert(storable_comp_username, company);
+            Ok(())
+        } else {
+            Err("Company not found")
+        }
+    })
+}
+
+#[ic_cdk::update]
+fn delete_company(comp_username: String) -> Result<(), &'static str> {
+    let caller_principal = ic_cdk::caller();
+    let storable_comp_username = StorableString { value: comp_username.clone() };
+
+    // Check if company exists and caller is admin
+    let admin_id = COMPANY_MAP.with(|mp| {
+        let map = mp.borrow();
+        if let Some(company) = map.get(&storable_comp_username) {
+            if company.admin_id != caller_principal.to_string() {
+                return Err("Only company admin can delete company");
+            }
+            Ok(company.admin_id.clone())
+        } else {
+            Err("Company not found")
+        }
+    })?;
+
+    // Remove company from COMPANY_MAP
+    COMPANY_MAP.with(|mp| {
+        mp.borrow_mut().remove(&storable_comp_username);
+    });
+
+    // Remove company from admins list in EMPLOYEE_COMPANIES_ADMIN
+    let storable_admin = StorableString { value: admin_id };
+    EMPLOYEE_COMPANIES_ADMIN.with(|map| {
+        let mut map = map.borrow_mut();
+        if let Some(mut id_list) = map.get(&storable_admin) {
+            id_list.ids.retain(|id| id != &comp_username);
+            if id_list.ids.is_empty() {
+                map.remove(&storable_admin);
+            } else {
+                map.insert(storable_admin, id_list);
+            }
+        }
+    });
+
+    // Get list of employees in this company
+    let employee_ids = COMPANY_EMPLOYEES.with(|map| {
+        let map_ref = map.borrow();
+        if let Some(emp_list) = map_ref.get(&storable_comp_username) {
+            emp_list.employees.iter()
+                .map(|e| e.employee_id.clone())
+                .collect::<Vec<String>>()
+        } else {
+            Vec::new()
+        }
+    });
+
+    // Remove all employees from COMPANY_EMPLOYEES
+    COMPANY_EMPLOYEES.with(|map| {
+        map.borrow_mut().remove(&storable_comp_username);
+    });
+
+    // Remove this company from each employee's company list in EMPLOYEE_COMPANIES
+    for emp_id in employee_ids {
+        EMPLOYEE_COMPANIES.with(|map| {
+            let mut map = map.borrow_mut();
+            let emp_key = StorableString { value: emp_id };
+            
+            if let Some(mut comp_list) = map.get(&emp_key) {
+                comp_list.ids.retain(|id| id != &comp_username);
+                if comp_list.ids.is_empty() {
+                    map.remove(&emp_key);
+                } else {
+                    map.insert(emp_key, comp_list);
+                }
+            }
+        });
+    }
+
+    Ok(())
 }
 
 ic_cdk::export_candid!();

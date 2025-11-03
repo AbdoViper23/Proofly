@@ -3,8 +3,8 @@ type ProofResult = record {
   employee_name : text;
   company_name : text;
   created_at : nat64;
+  company_username : text;
   position : text;
-  company_id : text;
   employee_id : text;
 };
 type Result = variant { Ok; Err : text };
@@ -13,7 +13,10 @@ type Result_2 = variant { Ok : ProofResult; Err : text };
 service : {
   add_employee : (text, text, text) -> (bool);
   add_new_companey : (text, text) -> (Result);
+  delete_company : (text) -> (Result);
+  edit_company : (text, text) -> (Result);
   generate_proof : (text) -> (Result_1);
+  get_company_name : (text) -> (Result_1) query;
   list_company_employess : (text) -> (vec CompanyEmployee) query;
   list_my_admin_companies : () -> (vec text) query;
   list_my_companies : () -> (vec text) query;

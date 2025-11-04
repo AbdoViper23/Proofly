@@ -7,21 +7,30 @@ import { LoadingSwap } from "../ui/loading-swap";
 import Link from "next/link";
 import CrossSVG from "../svg/CrossSVG";
 import { useRouter } from "next/navigation";
-import { login, isAuthenticated } from "@/lib/icp/auth";
-import { createAuthenticatedICPActor } from "@/lib/icp/actor";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 export default function Hero() {
     const router = useRouter();
-    const [authed, setAuthed] = useState(false);
+    const { isAuthenticated, login, isLoading } = useAuth();
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-    useEffect(() => {
-        const check = async () => {
-            const a = await isAuthenticated();
-            setAuthed(!!a);
-        };
-        check();
-    }, []);
+    const handleGoToDashboard = async () => {
+        if (!isAuthenticated) {
+            setIsLoggingIn(true);
+            try {
+                await login();
+                router.push("/dashboard");
+            } catch (error) {
+                console.error("Login failed:", error);
+            } finally {
+                setIsLoggingIn(false);
+            }
+        } else {
+            router.push("/dashboard");
+        }
+    };
+
     return (
         <BorderLayout id="hero" className="mt-3 border-t">
             <CrossSVG className="absolute -left-3 -top-3 " />
@@ -46,19 +55,11 @@ export default function Hero() {
                         <div className="flex gap-4 md:flex-row flex-col lg:flex-col">
                             <Button
                                 className="w-full"
-                                onClick={async () => {
-                                    if (authed) {
-                                        router.push("/dashboard");
-                                        return;
-                                    }
-                                    const identity = await login();
-                                    await createAuthenticatedICPActor(identity);
-                                    setAuthed(true);
-                                    router.push("/dashboard");
-                                }}
+                                onClick={handleGoToDashboard}
+                                disabled={isLoading || isLoggingIn}
                             >
-                                <LoadingSwap isLoading={false}>
-                                    <span>{authed ? "Go to Dashboard" : "Login with internet identity"}</span>
+                                <LoadingSwap isLoading={isLoading || isLoggingIn}>
+                                    <span>{isAuthenticated ? "Go to Dashboard" : "Login with Internet Identity"}</span>
                                 </LoadingSwap>
                             </Button>
                             <Button asChild
@@ -74,7 +75,7 @@ export default function Hero() {
                 </motion.div>
                 <div className="relative z-30">
                     <div className="hidden lg:flex items-center flex-nowrap gap-12 mt-8 mx-2">
-                        <Image fill className="rounded-2xl" src="/images/placeholder.jpeg"
+                        <Image fill className="rounded-2xl" src="/images/placeholder.jpg"
                             alt="placeholder" />
                     </div>
                 </div>

@@ -9,14 +9,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { Building2, Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { isAuthenticated } from "@/lib/icp/auth";
-import { useRouter } from "next/navigation";
 import { useICPActor } from '@/hooks/useICPActor'
 import type { Company } from '@/types/backend'
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 
 export default function page() {
-    const router = useRouter();
     // Mounted gate to prevent hydration mismatch
     const [mounted, setMounted] = useState(false);
     const [companies, setCompanies] = useState<Company[]>([]);
@@ -71,19 +69,14 @@ export default function page() {
         }
     };
 
-    // Guard + Load companies after auth
+    // Load companies when actor is ready
     useEffect(() => {
         const init = async () => {
-            const authed = await isAuthenticated();
-            if (!authed) {
-                router.replace("/");
-                return;
-            }
             await loadCompaniesFromBackend();
             setMounted(true);
         };
         init();
-    }, [actor, router]);
+    }, [actor]);
 
 
     // Add Dialog state
@@ -213,7 +206,7 @@ export default function page() {
     // Skeleton while mounting to avoid hydration mismatch
     if (!mounted) {
         return (
-            
+            <ProtectedRoute>
             <BorderLayout id="verify-page" className="mt-3 border-t">
                 <CrossSVG className="absolute -left-3 -top-3 " />
                 <CrossSVG className="absolute -right-3 -top-3" />
@@ -248,10 +241,12 @@ export default function page() {
                     </div>
                 </div>
             </BorderLayout>
+            </ProtectedRoute>
         );
     }
 
     return (
+        <ProtectedRoute>
         <BorderLayout id="verify-page" className="mt-3 border-t">
             <CrossSVG className="absolute -left-3 -top-3 " />
             <CrossSVG className="absolute -right-3 -top-3" />
@@ -446,6 +441,7 @@ export default function page() {
                 </DialogContent>
             </Dialog>
         </BorderLayout>
+        </ProtectedRoute>
     )
 
 }

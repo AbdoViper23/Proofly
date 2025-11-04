@@ -9,6 +9,11 @@
         "bindings": ["js", "ts", "did"]
       }
     },
+    "frontend": {
+      "source": ["frontend/out"],
+      "type": "assets",
+      "workspace": "frontend"
+    },
     "internet_identity": {
       "candid": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity.did",
       "type": "custom",
@@ -20,11 +25,6 @@
         }
       },
       "wasm": "https://github.com/dfinity/internet-identity/releases/latest/download/internet_identity_dev.wasm.gz"
-    },
-    "frontend": {
-      "source": ["frontend/out"],
-      "type": "assets",
-      "workspace": "frontend"
     }
   },
   "defaults": {

@@ -190,7 +190,7 @@ export default function Footer() {
                 </div>
                 <div className="flex items-end justify-end relative ">
                     <Image
-                        src="/svg/logoipsum.svg"
+                        src="/svg/Proofly-log.svg"
                         width={0}
                         height={0}
                         sizes="100vw"

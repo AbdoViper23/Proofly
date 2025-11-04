@@ -31,7 +31,7 @@ thread_local! {
     static PROOF_MAP: RefCell<StableBTreeMap<u128, Proof, Memory>> = RefCell::new(
         StableBTreeMap::init(MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(5)))) // ProofID -> Proof
     );
-    static NEXT_PROOF_ID: RefCell<u128> = RefCell::new(6);
+    static NEXT_PROOF_ID: RefCell<u128> = RefCell::new(0);
 }
 
 #[derive(CandidType, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -329,7 +329,7 @@ async fn generate_proof(company_username:String) -> Result<String, &'static str>
         *id += 1;
         current_id
     });
-    let proof_code=format!("{}-{}", random_code,proof_id.to_string()); // clear text-Proof ID
+    let proof_code=format!("{}{}", random_code,proof_id.to_string()); // clear text-Proof ID
 
     let mut hasher = Sha256::new();
     hasher.update(proof_code.as_bytes());
@@ -542,7 +542,7 @@ fn verify_proof(proof_code: String) -> Result<ProofResult, &'static str> {
 
     // get the secound part of proof (ID)
     let proof_id: u128 = proof_code
-        .get((PROOF_LENTGH as usize + 1)..)
+        .get((PROOF_LENTGH as usize)..)
         .ok_or("Proof code too short")?
         .parse()
         .map_err(|_| "Invalid proof ID")?;

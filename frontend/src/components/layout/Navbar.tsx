@@ -1,13 +1,15 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
-import { Building2, FileCheck, ShieldCheck, LogOut, User, Home, Menu, X } from "lucide-react";
+import { Input } from "../ui/input";
+import { Building2, FileCheck, ShieldCheck, LogOut, User, Home, Menu, X, CopyIcon, CheckIcon, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { logout } from "@/lib/icp/auth";
-import { useRouter } from "next/navigation";
+import { useICPActor } from "@/hooks/useICPActor";
+import { useAuth } from "@/contexts/AuthContext";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
@@ -18,12 +20,107 @@ const navLinks = [
 
 export default function Navbar() {
     const pathname = usePathname();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const router = useRouter();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [accountName, setAccountName] = useState<string>("Account");
+    const [copied, setCopied] = useState(false);
+    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editName, setEditName] = useState<string>("");
+    const [savingName, setSavingName] = useState(false);
+    const { actor, loading: connecting } = useICPActor();
+    const { principal: authPrincipal, isAuthenticated, logout: authLogout } = useAuth();
+    const principal = authPrincipal || "";
 
-    const handleLogout = async () => {
-        await logout();
-        router.replace("/");
+    // Fetch account name from backend using actor
+    const fetchAccountName = async () => {
+        if (!actor || connecting) {
+            return;
+        }
+
+        try {
+            // Fetch account name
+            const result = await actor.get_my_name();
+            console.log("Result:", result);
+            if (result && typeof result === 'object' && 'Ok' in result) {
+                const name = result.Ok as string;
+                setAccountName(name || "Set your name");
+                setEditName(name || "");
+            } else if (result && typeof result === 'object' && 'Err' in result) {
+                console.log("Account name error:", result.Err);
+                // If name not set or error, show placeholder
+                setAccountName("Set your name");
+                setEditName("");
+            }
+        } catch (error) {
+            console.error("Failed to fetch account name:", error);
+            setAccountName("Set your name");
+            setEditName("");
+        }
+    };
+
+    useEffect(() => {
+        fetchAccountName();
+    }, [actor, connecting]);
+
+    // Refetch name when popover opens
+    useEffect(() => {
+        if (isPopoverOpen && actor && !connecting) {
+            fetchAccountName();
+        }
+    }, [isPopoverOpen, actor, connecting]);
+
+    // Note: Principal is now from authPrincipal (useAuth)
+
+    // Handle copy principal
+    const handleCopyPrincipal = async () => {
+        if (!principal) return;
+        
+        try {
+            await navigator.clipboard.writeText(principal);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            console.error("Failed to copy principal:", error);
+        }
+    };
+
+    // Handle save name
+    const handleSaveName = async () => {
+        if (!actor || !editName.trim()) {
+            setIsEditingName(false);
+            return;
+        }
+
+        setSavingName(true);
+        try {
+            const result = await actor.set_full_name(editName.trim());
+            if (result && typeof result === 'object' && 'Ok' in result) {
+                setAccountName(editName.trim());
+                setIsEditingName(false);
+                // Refetch to make sure it's saved
+                await fetchAccountName();
+            } else if (result && typeof result === 'object' && 'Err' in result) {
+                alert("Error: " + result.Err);
+            }
+        } catch (error) {
+            console.error("Failed to save name:", error);
+            alert("Failed to save name. Please try again.");
+        } finally {
+            setSavingName(false);
+        }
+    };
+
+    // Handle edit name click
+    const handleEditNameClick = () => {
+        setEditName(accountName === "Set your name" ? "" : accountName);
+        setIsEditingName(true);
+    };
+
+    // Handle cancel edit
+    const handleCancelEdit = () => {
+        setEditName(accountName === "Set your name" ? "" : accountName);
+        setIsEditingName(false);
     };
 
     return (
@@ -33,7 +130,7 @@ export default function Navbar() {
                     {/* Logo & Brand */}
                     <Link href="/" className="flex items-center gap-3 group">
                         <Image 
-                            src="/svg/logoipsum.svg" 
+                            src="/images/proofly-logo.jpg" 
                             alt="Proofly Logo" 
                             width={40} 
                             height={40}
@@ -70,24 +167,121 @@ export default function Navbar() {
 
                     {/* Right side - Profile & Logout */}
                     <div className="flex items-center gap-3">
-                        {/* Profile Button - Hidden on mobile */}
-                        <button className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                                <User className="w-4 h-4 text-white" />
-                            </div>
-                            <span className="hidden lg:block font-matter text-sm text-gray-700 font-medium">Account</span>
-                        </button>
+                        {/* Profile Button with Popover - Hidden on mobile and when not authenticated */}
+                        {isAuthenticated && (
+                        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <button className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group">
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                                        <User className="w-4 h-4 text-white" />
+                                    </div>
+                                    <span className="hidden lg:block font-matter text-sm text-gray-700 font-medium">{accountName}</span>
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-4" align="end">
+                                <div className="space-y-4">
+                                    {/* Name Section */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-xs font-medium text-gray-500">Account Name</p>
+                                            {!isEditingName && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 px-2"
+                                                    onClick={handleEditNameClick}
+                                                >
+                                                    <Pencil className="w-3 h-3" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        {isEditingName ? (
+                                            <div className="space-y-2">
+                                                <Input
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    placeholder="Enter your name"
+                                                    className="text-sm"
+                                                    disabled={savingName}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && !savingName) {
+                                                            handleSaveName();
+                                                        } else if (e.key === 'Escape') {
+                                                            handleCancelEdit();
+                                                        }
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={handleSaveName}
+                                                        disabled={savingName || !editName.trim()}
+                                                        className="flex-1"
+                                                    >
+                                                        <Save className="w-3 h-3 mr-1" />
+                                                        {savingName ? "Saving..." : "Save"}
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={handleCancelEdit}
+                                                        disabled={savingName}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="px-3 py-2 bg-gray-50 rounded border text-sm text-gray-900 min-h-[2.5rem] flex items-center">
+                                                {accountName}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Principal ID Section */}
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Principal ID</p>
+                                        <div className="flex items-center gap-2">
+                                            <code className="flex-1 text-xs font-mono bg-gray-50 px-2 py-1.5 rounded border break-all min-h-[2.5rem] flex items-center">
+                                                {connecting && !principal ? "Loading..." : principal || "Not available"}
+                                            </code>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={handleCopyPrincipal}
+                                                className="shrink-0"
+                                                disabled={!principal || copied || connecting}
+                                                title={copied ? "Copied!" : "Copy to clipboard"}
+                                            >
+                                                {copied ? (
+                                                    <CheckIcon className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <CopyIcon className="w-4 h-4" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                        )}
                         
-                        {/* Logout Button - Hidden on mobile */}
+                        {/* Logout Button - Hidden on mobile and when not authenticated */}
+                        {isAuthenticated && (
                         <Button 
                             variant="outline" 
                             size="sm"
                             className="hidden sm:flex gap-2 font-matter !bg-white !text-gray-700 border-2 border-gray-300 hover:!bg-red-600 hover:!text-white hover:!border-red-600 transition-all duration-200 active:scale-95"
-                            onClick={handleLogout}
+                            onClick={async () => {
+                                await authLogout();
+                                router.push('/');
+                            }}
                         >
                             <LogOut className="w-4 h-4" />
                             <span>Logout</span>
                         </Button>
+                        )}
 
                         {/* Mobile Menu Button */}
                         <button
@@ -129,17 +323,116 @@ export default function Navbar() {
                                 );
                             })}
                             
-                            {/* Mobile Profile & Logout */}
+                            {/* Mobile Profile & Logout - Only show when authenticated */}
+                            {isAuthenticated && (
                             <div className="flex flex-col gap-2 mt-2 pt-4 border-t">
-                                <button className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-all duration-200 text-gray-600">
-                                    <User className="w-5 h-5" />
-                                    <span className="font-matter text-sm">Account</span>
-                                </button>
-                                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600">
+                                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <button className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-all duration-200 text-gray-600">
+                                            <User className="w-5 h-5" />
+                                            <span className="font-matter text-sm">{accountName}</span>
+                                        </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[calc(100vw-3rem)] p-4" align="start">
+                                        <div className="space-y-4">
+                                            {/* Name Section */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-xs font-medium text-gray-500">Account Name</p>
+                                                    {!isEditingName && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 px-2"
+                                                            onClick={handleEditNameClick}
+                                                        >
+                                                            <Pencil className="w-3 h-3" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                {isEditingName ? (
+                                                    <div className="space-y-2">
+                                                        <Input
+                                                            value={editName}
+                                                            onChange={(e) => setEditName(e.target.value)}
+                                                            placeholder="Enter your name"
+                                                            className="text-sm"
+                                                            disabled={savingName}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !savingName) {
+                                                                    handleSaveName();
+                                                                } else if (e.key === 'Escape') {
+                                                                    handleCancelEdit();
+                                                                }
+                                                            }}
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex gap-2">
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={handleSaveName}
+                                                                disabled={savingName || !editName.trim()}
+                                                                className="flex-1"
+                                                            >
+                                                                <Save className="w-3 h-3 mr-1" />
+                                                                {savingName ? "Saving..." : "Save"}
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={handleCancelEdit}
+                                                                disabled={savingName}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="px-3 py-2 bg-gray-50 rounded border text-sm text-gray-900 min-h-[2.5rem] flex items-center">
+                                                        {accountName}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Principal ID Section */}
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-500 mb-1">Principal ID</p>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="flex-1 text-xs font-mono bg-gray-50 px-2 py-1.5 rounded border break-all min-h-[2.5rem] flex items-center">
+                                                        {connecting && !principal ? "Loading..." : principal || "Not available"}
+                                                    </code>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={handleCopyPrincipal}
+                                                        className="shrink-0"
+                                                        disabled={!principal || copied || connecting}
+                                                        title={copied ? "Copied!" : "Copy to clipboard"}
+                                                    >
+                                                        {copied ? (
+                                                            <CheckIcon className="w-4 h-4 text-green-600" />
+                                                        ) : (
+                                                            <CopyIcon className="w-4 h-4" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                <button 
+                                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600"
+                                    onClick={async () => {
+                                        await authLogout();
+                                        router.push('/');
+                                        setIsMobileMenuOpen(false);
+                                    }}
+                                >
                                     <LogOut className="w-5 h-5" />
                                     <span className="font-matter text-sm">Logout</span>
                                 </button>
                             </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -147,4 +440,3 @@ export default function Navbar() {
         </nav>
     );
 }
-

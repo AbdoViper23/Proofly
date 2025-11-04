@@ -75,7 +75,7 @@ export default function Hero() {
                 </motion.div>
                 <div className="relative z-30">
                     <div className="hidden lg:flex items-center flex-nowrap gap-12 mt-8 mx-2">
-                        <Image fill className="rounded-2xl" src="/images/placeholder.jpeg"
+                        <Image fill className="rounded-2xl" src="/images/placeholder.jpg"
                             alt="placeholder" />
                     </div>
                 </div>

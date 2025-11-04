@@ -25,13 +25,16 @@ export interface Employee {
     position: string;
 }
 
-export interface CompanyEmployee {
+// Matches backend struct CompanyEmployeeWithName
+export interface CompanyEmployeeWithName {
     employee_id: string;
+    employee_name: string;
     position: string;
 }
 
+
 export interface CompanyEmployeeList {
-    employees: CompanyEmployee[];
+    employees: CompanyEmployeeWithName[];
 }
 
 export interface ProofResult {
@@ -44,4 +47,7 @@ export interface ProofResult {
 }
 
 export type Result<T> = { Ok: T } | { Err: string };
+
+// Convenience types for specific endpoints
+export type CompanyEmployeesResult = Result<CompanyEmployeeWithName[]>;
 

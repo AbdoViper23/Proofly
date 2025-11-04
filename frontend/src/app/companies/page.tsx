@@ -119,6 +119,25 @@ function EmployeesTable({
             size: 10,
         },
         {
+            id: "principal",
+            header: ({ column }) => (
+                <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                    className="px-0"
+                >
+                    Principal ID
+                    <ArrowUpDown className="ml-2 size-4" />
+                </Button>
+            ),
+            accessorFn: (row) => row.id,
+            cell: ({ row }) => (
+                <div className="font-mono text-xs break-all">
+                    {row.original.id}
+                </div>
+            ),
+        },
+        {
             accessorKey: "name",
             header: ({ column }) => (
                 <Button
@@ -389,10 +408,10 @@ function CompanyPageContent() {
                 
                 let employees: Employee[] = [];
                 if ('Ok' in employeesResult) {
-                    // Convert to Employee objects
+                    // Convert to Employee objects (backend returns employee_name, employee_id, position)
                     employees = employeesResult.Ok.map((emp: any) => ({
                         id: emp.employee_id,
-                        name: emp.employee_id,  // Using principal ID as name
+                        name: emp.employee_name,
                         position: emp.position
                     }));
                 }
@@ -441,7 +460,7 @@ function CompanyPageContent() {
     const openEditEmp = (emp: Employee) => {
         setIsEditing(true);
         setEditingEmpId(emp.id);
-        setEmpForm({ principalId: emp.name, position: emp.position });
+        setEmpForm({ principalId: emp.id, position: emp.position });
         setOpenEmp(true);
     };
 
@@ -495,7 +514,7 @@ function CompanyPageContent() {
             if ('Ok' in employeesResult) {
                 const employees: Employee[] = employeesResult.Ok.map((emp: any) => ({
                     id: emp.employee_id,
-                    name: emp.employee_id,
+                    name: emp.employee_name,
                     position: emp.position
                 }));
                 
@@ -587,7 +606,7 @@ function CompanyPageContent() {
             if ('Ok' in employeesResult) {
                 const employees: Employee[] = employeesResult.Ok.map((emp: any) => ({
                     id: emp.employee_id,
-                    name: emp.employee_id,
+                    name: emp.employee_name,
                     position: emp.position
                 }));
                 

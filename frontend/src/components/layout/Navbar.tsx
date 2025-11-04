@@ -2,12 +2,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Building2, FileCheck, ShieldCheck, LogOut, User, Home, Menu, X, CopyIcon, CheckIcon, Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useICPActor } from "@/hooks/useICPActor";
+import { useAuth } from "@/contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const navLinks = [
@@ -19,15 +20,17 @@ const navLinks = [
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [accountName, setAccountName] = useState<string>("Account");
-    const [principal, setPrincipal] = useState<string>("");
     const [copied, setCopied] = useState(false);
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState<string>("");
     const [savingName, setSavingName] = useState(false);
     const { actor, loading: connecting } = useICPActor();
+    const { principal: authPrincipal, isAuthenticated, logout: authLogout } = useAuth();
+    const principal = authPrincipal || "";
 
     // Fetch account name from backend using actor
     const fetchAccountName = async () => {
@@ -67,28 +70,7 @@ export default function Navbar() {
         }
     }, [isPopoverOpen, actor, connecting]);
 
-    // Fetch principal when popover opens
-    useEffect(() => {
-        const fetchPrincipal = async () => {
-            if (!actor || connecting || !isPopoverOpen) {
-                return;
-            }
-
-            try {
-                const principalResult = await actor.get_principal();
-                if (principalResult && typeof principalResult === 'string') {
-                    setPrincipal(principalResult);
-                } else {
-                    setPrincipal("");
-                }
-            } catch (error) {
-                console.error("Failed to fetch principal:", error);
-                setPrincipal("");
-            }
-        };
-
-        fetchPrincipal();
-    }, [actor, connecting, isPopoverOpen]);
+    // Note: Principal is now from authPrincipal (useAuth)
 
     // Handle copy principal
     const handleCopyPrincipal = async () => {
@@ -288,8 +270,9 @@ export default function Navbar() {
                             variant="outline" 
                             size="sm"
                             className="hidden sm:flex gap-2 font-matter !bg-white !text-gray-700 border-2 border-gray-300 hover:!bg-red-600 hover:!text-white hover:!border-red-600 transition-all duration-200 active:scale-95"
-                            onClick={() => {
-                                // Placeholder - no functionality
+                            onClick={async () => {
+                                await authLogout();
+                                router.push('/');
                             }}
                         >
                             <LogOut className="w-4 h-4" />
@@ -434,8 +417,10 @@ export default function Navbar() {
                                 </Popover>
                                 <button 
                                     className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 transition-all duration-200 text-red-600"
-                                    onClick={() => {
-                                        // Placeholder - no functionality
+                                    onClick={async () => {
+                                        await authLogout();
+                                        router.push('/');
+                                        setIsMobileMenuOpen(false);
                                     }}
                                 >
                                     <LogOut className="w-5 h-5" />

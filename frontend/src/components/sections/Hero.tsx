@@ -7,9 +7,29 @@ import { LoadingSwap } from "../ui/loading-swap";
 import Link from "next/link";
 import CrossSVG from "../svg/CrossSVG";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 export default function Hero() {
     const router = useRouter();
+    const { isAuthenticated, login, isLoading } = useAuth();
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+    const handleGoToDashboard = async () => {
+        if (!isAuthenticated) {
+            setIsLoggingIn(true);
+            try {
+                await login();
+                router.push("/dashboard");
+            } catch (error) {
+                console.error("Login failed:", error);
+            } finally {
+                setIsLoggingIn(false);
+            }
+        } else {
+            router.push("/dashboard");
+        }
+    };
 
     return (
         <BorderLayout id="hero" className="mt-3 border-t">
@@ -35,12 +55,11 @@ export default function Hero() {
                         <div className="flex gap-4 md:flex-row flex-col lg:flex-col">
                             <Button
                                 className="w-full"
-                                onClick={() => {
-                                    router.push("/dashboard");
-                                }}
+                                onClick={handleGoToDashboard}
+                                disabled={isLoading || isLoggingIn}
                             >
-                                <LoadingSwap isLoading={false}>
-                                    <span>Go to Dashboard</span>
+                                <LoadingSwap isLoading={isLoading || isLoggingIn}>
+                                    <span>{isAuthenticated ? "Go to Dashboard" : "Login with Internet Identity"}</span>
                                 </LoadingSwap>
                             </Button>
                             <Button asChild

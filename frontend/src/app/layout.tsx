@@ -4,6 +4,7 @@ import { calSemibold, geistMono, geistSans, inter, matter, robotoMono } from "..
 import { ToastProvider } from "@/components/ui/toast";
 import Footer from "@/components/sections/Footer";
 import ConditionalNavbar from "@/components/layout/ConditionalNavbar";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -20,11 +21,13 @@ export default function RootLayout({
       <body
         className={`${calSemibold.variable} ${matter.variable} ${inter.variable} ${robotoMono.variable} ${geistSans.variable} ${geistMono.variable} antialiased light`}
       >
-        <ToastProvider>
-          <ConditionalNavbar />
-          {children}
-          <Footer />
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <ConditionalNavbar />
+            {children}
+            <Footer />
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

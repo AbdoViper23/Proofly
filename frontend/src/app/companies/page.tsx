@@ -39,6 +39,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useICPActor } from '@/hooks/useICPActor'
 import type { Company, Employee } from '@/types/backend'
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 
 // ========== Back button (router back or fallback) ==========
@@ -749,6 +750,7 @@ function CompanyPageContent() {
 
 export default function Page() {
     return (
+        <ProtectedRoute>
         <Suspense fallback={
             <BorderLayout id="company-page" className="mt-3 border-t">
                 <CrossSVG className="absolute -left-3 -top-3 " />
@@ -764,6 +766,7 @@ export default function Page() {
         }>
             <CompanyPageContent />
         </Suspense>
+        </ProtectedRoute>
     );
 }
 

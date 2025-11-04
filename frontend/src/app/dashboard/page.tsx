@@ -7,10 +7,12 @@ import { LoadingSwap } from "../../components/ui/loading-swap";
 import CrossSVG from "../../components/svg/CrossSVG";
 import { FileCheck, Building2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function Dashboard() {
 
     return (
+        <ProtectedRoute>
         <BorderLayout id="dashboard" className="mt-3 border-t">
                 <CrossSVG className="absolute -left-3 -top-3" />
                 <CrossSVG className="absolute -right-3 -top-3" />
@@ -123,5 +125,6 @@ export default function Dashboard() {
                     </div>
                 </div>
             </BorderLayout>
+        </ProtectedRoute>
     );
 }

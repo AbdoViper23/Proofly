@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useICPActor } from '@/hooks/useICPActor'
 import type { Company } from '@/types/backend'
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 
 export default function page() {
@@ -205,7 +206,7 @@ export default function page() {
     // Skeleton while mounting to avoid hydration mismatch
     if (!mounted) {
         return (
-            
+            <ProtectedRoute>
             <BorderLayout id="verify-page" className="mt-3 border-t">
                 <CrossSVG className="absolute -left-3 -top-3 " />
                 <CrossSVG className="absolute -right-3 -top-3" />
@@ -240,10 +241,12 @@ export default function page() {
                     </div>
                 </div>
             </BorderLayout>
+            </ProtectedRoute>
         );
     }
 
     return (
+        <ProtectedRoute>
         <BorderLayout id="verify-page" className="mt-3 border-t">
             <CrossSVG className="absolute -left-3 -top-3 " />
             <CrossSVG className="absolute -right-3 -top-3" />
@@ -438,6 +441,7 @@ export default function page() {
                 </DialogContent>
             </Dialog>
         </BorderLayout>
+        </ProtectedRoute>
     )
 
 }

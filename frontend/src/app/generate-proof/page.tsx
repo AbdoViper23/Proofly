@@ -18,6 +18,7 @@ import { toastManager } from '@/components/ui/toast'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { useICPActor } from '@/hooks/useICPActor'
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 
 const generateProofCodeSchema = z.object({
@@ -160,6 +161,7 @@ export default function page() {
 
 
     return (
+        <ProtectedRoute>
         <BorderLayout id='generate-proof' className='mt-3 border-t'>
             <CrossSVG className="absolute -left-3 -top-3 " />
             <CrossSVG className="absolute -right-3 -top-3" />
@@ -322,5 +324,6 @@ export default function page() {
                 </div>
             </div>
         </BorderLayout>
+        </ProtectedRoute>
     )
 }

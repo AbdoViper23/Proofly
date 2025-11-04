@@ -33,7 +33,7 @@ export default function page() {
             // Load companies from backend (returns array of usernames)
             const companyUsernames = await actor.list_my_admin_companies() as string[];
             
-            // Fetch company names for each username
+            // Fetch company names and employee counts for each username
             const companiesData: Company[] = await Promise.all(
                 companyUsernames.map(async (username, index) => {
                     try {
@@ -41,12 +41,24 @@ export default function page() {
                         const nameResult = await actor.get_company_name(username);
                         const companyName = 'Ok' in nameResult ? nameResult.Ok : username;
                         
+                        // Get employees list to count them
+                        let employeesCount = 0;
+                        try {
+                            const employeesResult = await actor.list_company_employess(username);
+                            if ('Ok' in employeesResult) {
+                                employeesCount = employeesResult.Ok.length;
+                            }
+                        } catch (error) {
+                            // If fetching employees fails, count stays 0
+                            console.error(`Failed to fetch employees for ${username}:`, error);
+                        }
+                        
                         return {
                             id: index + 1,
                             username: username,
                             name: companyName,
                             image: "",
-                            employees: []
+                            employees: Array(employeesCount).fill(null) // Array with length = employeesCount
                         };
                     } catch (error) {
                         // Fallback to username if get_company_name fails
@@ -198,9 +210,29 @@ export default function page() {
         }
     };
 
-    const handleDeleteCompany = (id: number) => {
-        if (!confirm("Are you sure you want to delete this company?")) return;
-        setCompanies((prev) => prev.filter((c) => c.id !== id));
+    const handleDeleteCompany = async (company: Company) => {
+        if (!confirm(`Are you sure you want to delete "${company.name}"? This action cannot be undone.`)) return;
+
+        if (!actor) {
+            alert("Not connected to backend");
+            return;
+        }
+
+        try {
+            // Call backend to delete company
+            const result = await actor.delete_company(company.username);
+            
+            if ('Ok' in result) {
+                alert("Company deleted successfully!");
+                
+                // Reload companies from backend to ensure consistency
+                await loadCompaniesFromBackend();
+            } else {
+                alert("Error: " + result.Err);
+            }
+        } catch (error) {
+            alert("Failed to delete company: " + (error instanceof Error ? error.message : "Unknown error"));
+        }
     };
 
     // Skeleton while mounting to avoid hydration mismatch
@@ -375,7 +407,7 @@ export default function page() {
                                         <Button
                                             variant="destructive"
                                             className="gap-1"
-                                            onClick={() => handleDeleteCompany(item.id)}
+                                            onClick={() => handleDeleteCompany(item)}
                                         >
                                             <Trash2 className="size-4" /> Delete
                                         </Button>

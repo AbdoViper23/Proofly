@@ -130,7 +130,7 @@ export default function Navbar() {
                     {/* Logo & Brand */}
                     <Link href="/" className="flex items-center gap-3 group">
                         <Image 
-                            src="/images/proofly-logo.jpg" 
+                            src="/images/proofly-logo.png" 
                             alt="Proofly Logo" 
                             width={40} 
                             height={40}

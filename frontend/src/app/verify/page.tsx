@@ -21,6 +21,8 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { useICPActor } from '@/hooks/useICPActor'
 import type { ProofResult, Result } from '@/types/backend'
 
+const MIN_PROOF_CODE_LENGTH = 11
+
 const proofCodeSchema = z.object({
     proofCode: z.string().min(1, "Proof code is required"),
 })
@@ -45,6 +47,17 @@ export default function page() {
 
     const onSubmit = async (data: proofCodeFormData) => {
         
+        // Check minimum proof code length
+        if (data.proofCode.length < MIN_PROOF_CODE_LENGTH) {
+            toastManager.add({
+                title: "Proof code is too short",
+                description: `Proof code must be at least ${MIN_PROOF_CODE_LENGTH} characters long.`,
+                type: "error",
+                timeout: 3000,
+            })
+            return
+        }
+
         if (!actor) {
             toastManager.add({
                 title: "Connection Error",
@@ -167,7 +180,7 @@ export default function page() {
                             <CardHeader className='text-start'>
                                 <CardTitle>Enter Proof Code</CardTitle>
                                 <CardDescription>
-                                    Proof codes are in the format: COMPANY_ID-EMPLOYEE_ID-TIMESTAMP
+                                    Proof codes are unique alphanumeric codes generated for each employee
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

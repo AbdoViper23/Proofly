@@ -20,11 +20,13 @@ export default function Hero() {
             setIsLoggingIn(true);
             try {
                 await login();
-                router.push("/dashboard");
+                // Redirect will happen automatically in AuthContext after successful login
+                // Note: setIsLoggingIn(false) not needed here as redirect will happen
             } catch (error) {
                 console.error("Login failed:", error);
             } finally {
-                setIsLoggingIn(false);
+                // Reset loading state if login failed or was cancelled
+                setTimeout(() => setIsLoggingIn(false), 100);
             }
         } else {
             router.push("/dashboard");

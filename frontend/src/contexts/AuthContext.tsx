@@ -116,6 +116,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const principalId = identity.getPrincipal().toString();
             setPrincipal(principalId);
             console.log('Login successful. Principal:', principalId);
+            
+            // Redirect to dashboard after successful login
+            if (typeof window !== 'undefined') {
+              window.location.href = '/dashboard';
+            }
           }
         },
         onError: (error?: string) => {

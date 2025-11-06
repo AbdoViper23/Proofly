@@ -1,4 +1,4 @@
-# 🛡️ Proofly - Decentralized Employment Verification System
+# 🛡️ Proofly - A Decentralized Cryptographical Employment State Verification Solution for Legal & Social Proof
 
 <div align="center">
 
@@ -23,17 +23,12 @@
 
 Unlike traditional verification systems that rely on centralized databases and manual processes, Proofly uses **SHA-256 cryptographic hashing** and **immutable blockchain storage** to provide instant, verifiable employment proofs without storing sensitive personal data.
 
-### 🎯 Built For
 
-- **Legal Teams** - Cryptographically-signed employment verification for litigation
-- **HR Departments** - Instant background checks with blockchain-backed proof
-- **Compliance Officers** - Auditable verification trail for regulatory requirements
-- **Recruitment Agencies** - Fraud-proof employment history validation
-- **Social Platforms** - Verify professional credentials on LinkedIn, Twitter, etc.
-- **Financial Institutions** - Employment validation for loan applications and KYC
+## 📋 Vision
+
+Global businesses struggles in employment verification process. "PROOFLY" uses blockchain's cryptography verification properties to create a tamper-proof solution mainly to proof - to 3rd parities interested - the existence and state of a relationship between a "specific" employee and a "specific" institution. i.e. whether he/she is really employed - or have been employed before - by that institution or not! 
 
 ---
-
 ## 🚨 The Problem
 
 ### Employment Fraud & Verification Challenges
@@ -67,112 +62,277 @@ Professional networks and remote work have created new vulnerabilities for emplo
 - Databases can be hacked, manipulated, or taken offline
 - No transparency in verification processes
 
+### 🎯 Built For
+
+- **Legal Teams** - Cryptographically-signed employment verification for litigation
+- **HR Departments** - Instant background checks with blockchain-backed proof
+- **Compliance Officers** - Auditable verification trail for regulatory requirements
+- **Recruitment Agencies** - Fraud-proof employment history validation
+- **Social Platforms** - Verify professional credentials on LinkedIn, Twitter, etc.
+- **Financial Institutions** - Employment validation for loan applications and KYC
+
 ---
 
-## ✅ The Solution
+## ⚖️ The pain point(s) & dilemma(s) we are trying to solve
 
-**Proofly uses blockchain and cryptography to solve these problems:**
+### 1. Employment Verification Challenges
 
-### 🔐 Cryptographically Secure
-- **Tamper-proof** - Blockchain records are immutable and publicly auditable
-- **Hash-based verification** - SHA-256 cryptographic proofs prevent forgery
-- **Zero-knowledge** - Original proof codes are never stored, only hashes
-- **Time-stamped** - Every verification has a permanent timestamp on-chain
-- **Single-use tokens** - Proof codes expire and cannot be reused
+As employment verification is critical in some use-cases like:
+- ☑ **Professional Requirements**: Background and experience checks.
+- 💸 **Financial eligibility**: Employment-based aids and loans.
+- ⚖️ **Employment Litigation**: Employment disputes.
+- 📜 **Labor laws in other countries**:  Professional visa eligibility.
 
-### ⚡ Decentralized & Resilient
-- **No central authority** - Runs on Internet Computer Protocol's distributed network
-- **Censorship-resistant** - No single entity can shut down the system
-- **Global availability** - Operates anywhere with internet connectivity
-- **Zero downtime** - Resilient to server failures and attacks
-- **Open & transparent** - All verifications are publicly auditable
+### 2. LinkedIn Recruitment Fraud Pandemic ([Reference 1](https://www.linkedin.com/posts/digital-cyber-blockchain_fake-jobs-most-of-those-jobs-didnt-actually-activity-7364465833458241536-FZ8D)).
+LinkedIn users are facing lots of Fraud hassles everyday like:
+- 🤥 **SCAM**: Fake jobs causes identity or money theft plus malware distribution 
+- 👨‍💻 **Company Impersonation**:  Can harm proposed employees or cause brand attacks.
+- 👿 **Fraud Social Engineering**: Can cause crypto wallet theft.
+- 🥷🏻 **Employee Impersonation**:  Can cause gaining access to unrightful privileges.
 
-### 🔒 Privacy-First Design
-- **Minimal data storage** - Only encrypted identifiers, no personally identifiable information
-- **Principal-based auth** - Uses ICP's cryptographic identity system
-- **Self-sovereign** - Employees control their own verification data
-- **GDPR/CCPA compliant** - Privacy by design architecture
-- **No email/phone required** - Reduces attack surface for data breaches
+### 3. Real-World Impact
+- **68%** of job seekers encounter fake recruiters (Ghost Jobs) ([Reference 2](https://www.reddit.com/r/recruitinghell/comments/1k8b8ow/nearly_68_of_hiring_managers_admitted_to_posting/)),  ([Reference 3](https://www.cio.com/article/3610861/beware-the-rise-of-ghost-jobs-fake-job-openings-with-no-intent-to-hire.html)).
+- **$3.9B** lost annually to employment scams of which **$$2B+** in US only ([Reference 4](https://www.aerotek.com/en/insights/impact-of-job-scams-on-job-searches)).
+- **No verification mechanism** for both recruiter/employee authenticity.
+- **Lawsuits against legitimate companies for scams they didn't commit**.
 
-### 🚀 Developer-Friendly
-- **Free public API** - No authentication required for verification queries
-- **Sub-second response** - Query calls execute instantly
-- **Type-safe interfaces** - Candid provides compile-time type checking
-- **RESTful design** - Simple, predictable API patterns
-- **Comprehensive docs** - Complete API reference and examples
+---
 
+## 💡 PROOFLY's Solution
+
+**A decentralized legal verification platform providing cryptographically-secured proof codes serving as a "proof of employment" both current and historical**.
+
+Think of **PROOFLY** as a **"Digital notary for employment"** instant, free, tamper-proof, and privacy-compliant.
+
+### How It works:
+
+1. **Company Registration:** Company X register at **PROOFLY**.
+2. **Employees Authentication:** Company X's admin authenticate their employees.
+3. **Employee Authorization:** Company X's admin authorize employees/x-employees to generate a proof of employment.
+4. **Proof Generation:** Employee/X-employee generates unique proof code valid for a specific period of time.
+5. **Instant Verification:** Any 3d party can verify employee/x-employee claim to be/have been employed publicly without logining to **PROOFLY**.
+---
+
+**IMPORTANT NOTE: The scope of the project submitted to the LegalHack 2025 does not include all the milestones of the project. We are only submitting the 1st Milestone of the project which covers all the above five steps mentioned under "How it works"! The rest milestones will be developed one after the other after the Hackathon.**
+
+## 🔐 Why Blockchain for legal and notary applications?
+
+**1. Tamper-proof records:** Employment data **cannot be altered** once recorded. Like court records sealed by **immutable audit trail** that serves as abiding order/evidence.
+
+**2. Cryptographic verification:**
+- Mathematical proof of code authenticity.
+- Like notary seal and impossible to forge.
+- Courts increasingly accept cryptographic evidence particularly as the legal system adapts to new technologies like blockchain.
+- Cryptographic verification methods, particularly digital signatures using public key infrastructure (PKI) which meets and even exceed legal authentication standards in most jurisdictions worldwide. 
+- Legislation in many countries grants these methods in the same legal weight as traditional handwritten signatures for most transactions.
+
+**3. Decentralized (no single point of failure)**
+- Not controlled by any entity.
+- Records persist permanently.
+- Like public records accessible to anybody concerned.
+- No vendor lock-in.
+- Instant cross-border verification.
+
+**4. Privacy by design**
+- Only essential information stored.
+
+- GDPR-compliant from ground up:<br>
+    &nbsp;&nbsp;✅ **Data Minimization**: Only essential data (company, employee ID, timestamp).<br>
+    &nbsp;&nbsp;✅ **Purpose Limitation**: Used only for employment verification.<br>
+    &nbsp;&nbsp;✅ **Storage Limitation**: Proof code expires after a specific period of time.<br>
+    &nbsp;&nbsp;✅ **Right to be Forgotten**: Records can be removed.<br>
+    &nbsp;&nbsp;✅ **Privacy by Design**: No tracking or profiling.
+
+- No verification history tracking which considered bad from privacy concerns and data security risks points of view.
+
+---
+
+## 📊 Use Cases & Legal Benefits
+
+### Employee relocation:
+
+❎**Traditional**: Employee waits 2-3 weeks for employer letter (in some cases) → embassy delays processing → opportunities may be missed!
+
+✅ **With PROOFLY**: Employee gets instant proof code → embassy can verify in 5 seconds → visa processing continues afterwards.
+
+### Employment litigation procedures:
+
+❎**Traditional**: Opposing party claims employment → subpoena records → Wait weeks → time lost in delays.
+
+✅ **With PROOFLY**: Request proof code → cryptographic verification in seconds → proof can reach court fast  → no subpoena needed.
+
+### LinkedIn scam prevention:
+
+❎**Without PROOFLY**: Job seeker receives a job proposal with no way to verify it's authenticity → he/she shares personal data → he/she became a fraud victim ([Reference 1](https://www.linkedin.com/posts/digital-cyber-blockchain_fake-jobs-most-of-those-jobs-didnt-actually-activity-7364465833458241536-FZ8D)).
+
+✅ **With PROOFLY**: Recruiter provides code → job seeker verifies instantly → if valid it is safe to proceed and if not job seeker is aware.
+
+---
+
+## 🌍 Real-World Impact
+
+### Problem Scale:
+- **Verification time**: Traditionally too long.
+- **High cost**: Cost per verification is very high and sometimes not possible.
+- **Trustworthiness**: High percentage of job seekers encountering scam everyday.
+- **Financial losses**: Annual losses to employment fraud around $2B+ in US only.
+- **Avilability**: Limited.
+
+### PROOFLY Solution:
+- **Verification time**: Around  5 seconds⚡
+- **Very low cost**: some cents 💰
+- **Trustworthiness**: Near 100% Fraud prevention 🔒
+- **Financial losses**: NONE.
+- **Avilability**: Global availability 🌍
+
+### For Legal Practice:
+
+**Time Savings:**
+- Immigration: Saves weeks and sometimes a month per application.
+- Due diligence: Reduce timeline by huge percent.
+- Litigation: Instant vs. weeks of subpoenas obstacles.
+
+**Cost Savings:**
+- Eliminate verification fees.
+- Reduce paralegal time.
+- Faster case resolution.
+
+**Risk Reduction:**
+- No forged letters! Cryptographic proofs presented to courts.
+- GDPR compliance built-in.
+- Reduces exposure to abuses and corruption.
+
+---
+
+## 📦 Local Development Setup
+
+This guide explains how to run **Proofly** locally on your machine for testing and development.
+
+### 🧰 Prerequisites
+Before starting, make sure you have the following installed:
+- [Node.js](https://nodejs.org/) (v18+ recommended)
+- [DFX SDK](https://internetcomputer.org/docs/current/developer-docs/setup/install)
+- [npm](https://www.npmjs.com/) or [pnpm](https://pnpm.io/)
+- Internet Identity (optional for local authentication testing)
+
+---
+
+### 🚀 Run Locall
+Follow these steps to run Proofly locally:
+
+```bash
+# 1️⃣ Clone the repository
+git clone https://github.com/AbdoViper23/Proofly.git
+
+# 2️⃣ Navigate to the project directory
+cd Proofly
+
+# 3️⃣ Generate Candid bindings for the backend canister
+dfx generate backend
+
+# 4️⃣ Navigate to the frontend folder
+cd frontend
+
+# 5️⃣ Install dependencies
+npm install   # or pnpm install
+
+# 6️⃣ Build the frontend
+npm run build
+
+# 7️⃣ Start the local Internet Computer replica
+dfx start --background
+
+# 8️⃣ Deploy canisters locally
+dfx deploy
+```
+---
+
+
+## 🧩 Project Structure Overview
+
+The Proofly project is organized into clear layers separating frontend, backend, and configuration files for maintainability and scalability.
+
+```
+
+Proofly/
+├── backend/                 # Internet Computer backend canister (Rust)
+│   ├── src/                 # Rust source code (logic, storage maps, functions)
+│   ├── Cargo.toml           # Rust dependencies and project config
+│   └── Cargo.lock
+│
+├── frontend/                # Next.js + TypeScript frontend application
+│   ├── pages/               # Next.js routes (public & private pages)
+│   ├── components/          # Reusable React UI components
+│   ├── hooks/               # Custom React hooks (e.g., wagmi, auth)
+│   ├── lib/                 # Utilities (DFX bindings, API helpers)
+│   ├── public/              # Static assets (logo, icons)
+│   ├── styles/              # Global CSS and Tailwind styles
+│   └── package.json         # Frontend dependencies and scripts
+│
+├── .dfx/                    # DFX local environment (auto-generated)
+├── dfx.json                 # Canister configuration and network settings
+├── README.md                # Project documentation
+└── LICENSE                  # Open-source license information
+
+```
+
+
+## 🔧 ICP Features & Technologies Used
+
+### Core ICP Capabilities Leveraged
+
+**1. Internet Identity v2**
+-  Decentralized, passwordless authentication using biometrics
+-  Privacy-preserving: unique Principal ID per user/application
+-  Cross-platform support without password risks
+
+**2. Principal-Based Identity**
+-  **User Principals**: Cryptographically unique identifiers
+-  **Canister Principals**: Smart contract identifiers
+-  **Caller Authentication**: Backend verifies identity on every request
+
+**3. Canister Smart Contracts**
+-  **Backend Canister (Rust)**: Core logic with tamper-proof storage
+-  **Frontend Canister**: Entire Next.js app hosted on-chain
+-  **Stable Memory**: Persistent storage survives upgrades
+
+**4. Cryptographic Verification**
+-  **Chain Key Cryptography**: Tamper-proof records via threshold signatures
+-  **Public Verification**: Anyone can verify proof codes instantly
+-  **Immutable Audit Trail**: Permanent, verifiable records
+
+**5. Decentralized Infrastructure**
+-  **100% On-Chain**: No traditional servers needed
+-  **Global Access**: Fast verification from anywhere
+-  **Low Cost**: Efficient cycles model, no user gas fees
+
+**6. Performance Optimization**
+-  **Query Calls**: Fast read-only verification (sub-second)
+-  **Update Calls**: Secure writes with consensus
+-  **Inter-Canister Communication**: Secure frontend-backend integration
+
+---
+
+### Why ICP?
+
+ICP provides the perfect foundation for Proofly:
+- ✅ **Legal-grade cryptographic proofs** (court-admissible)
+- ✅ **decentralization**
+- ✅ **GDPR-compliant by design**
+- ✅ **Global instant verification**
+- ✅ **Cost-efficient** (pennies per verification)
+- ✅ **User-friendly** (no crypto wallets required)
+
+**All running 100% on-chain without traditional cloud infrastructure.**
 ---
 
 ## 🏗️ Technical Architecture
 
-### System Overview
+### System Architecture
+<img width="1763" height="914" alt="system" src="https://github.com/user-attachments/assets/964fd7c3-0f50-4d14-a973-c0429c547773" />
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Frontend Layer                           │
-│                   (Next.js + TypeScript)                    │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  • Company Management Dashboard                       │  │
-│  │  • Employee Self-Service Portal                       │  │
-│  │  • Cryptographic Proof Generation UI                  │  │
-│  │  • Public Verification Interface                      │  │
-│  │  • Real-time validation with React Hook Form          │  │
-│  └───────────────────────────────────────────────────────┘  │
-└───────────────────────┬─────────────────────────────────────┘
-                        │ 
-                        │ Candid Interface (Type-Safe RPC)
-                        │
-┌───────────────────────┴─────────────────────────────────────┐
-│              Backend Canister Layer                         │
-│              (Rust on Internet Computer)                    │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │          Stable Memory Storage Architecture           │  │
-│  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │  COMPANY_MAP                                    │  │  │
-│  │  │  • StorableString → Company                     │  │  │
-│  │  │  • Stores: ID, name, admin_id, timestamps       │  │  │
-│  │  └─────────────────────────────────────────────────┘  │  │
-│  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │  EMPLOYEE_MAP                                   │  │  │
-│  │  │  • StorableString → Employee                    │  │  │
-│  │  │  • Stores: ID, display name                     │  │  │
-│  │  └─────────────────────────────────────────────────┘  │  │
-│  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │  PROOF_MAP                                      │  │  │
-│  │  │  • u128 → Proof                                 │  │  │
-│  │  │  • Stores: SHA-256 hash, company_id, emp_id     │  │  │
-│  │  │  • Includes: created_at, expires_at, is_used    │  │  │
-│  │  └─────────────────────────────────────────────────┘  │  │
-│  │  ┌─────────────────────────────────────────────────┐  │  │
-│  │  │  Relationship Maps (Graph Structure)            │  │  │
-│  │  │  • COMPANY_EMPLOYEES:  Company → [Employees]    │  │  │
-│  │  │  • EMPLOYEE_COMPANIES: Employee → [Companies]   │  │  │
-│  │  │  • EMPLOYEE_COMPANIES_ADMIN: Admin → [Cos]      │  │  │
-│  │  └─────────────────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  Core Functions (Access Control Applied):                   │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  🔐 add_new_companey()         [Creates admin]        │  │
-│  │  🔐 add_employee()              [Admin-only]          │  │
-│  │  🔐 remove_employee()           [Admin-only]          │  │
-│  │  🔒 generate_proof()            [Employee auth]       │  │
-│  │  🌐 verify_proof()              [Public query]        │  │
-│  │  🔒 list_my_companies()         [User auth]           │  │
-│  │  🌐 list_company_employess()    [Public query]        │  │
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                        │
-                        │ Persistent State
-                        ↓
-┌─────────────────────────────────────────────────────────────┐
-│           Internet Computer Protocol (ICP)                  │
-│  • Distributed consensus network                            │
-│  • Cryptographic chain-key technology                       │
-│  • WebAssembly smart contracts (canisters)                  │
-│  • Stable memory (survives upgrades)                        │
-└─────────────────────────────────────────────────────────────┘
-```
+### Memory Relation Map (stored in Stable memory)
+<img width="1321" height="1031" alt="Data Map" src="https://github.com/user-attachments/assets/fc4929a4-e50c-45af-b366-686058bb5ff4" />
 
 ### 🔐 Cryptographic Proof System
 
@@ -278,648 +438,7 @@ Professional networks and remote work have created new vulnerabilities for emplo
 │     • Includes: company_id, employee_id, timestamps         │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### 🔧 Storage Architecture
-
-#### Stable Memory Design
-
-Proofly uses **ic-stable-structures** for persistent storage that survives canister upgrades:
-
-```rust
-// Memory Manager with isolated memory regions
-MEMORY_MANAGER: MemoryManager<DefaultMemoryImpl>
-
-// Memory IDs (isolated namespaces)
-MemoryId(0): COMPANY_EMPLOYEES      // Company → [Employee IDs]
-MemoryId(1): EMPLOYEE_COMPANIES     // Employee → [Company IDs]
-MemoryId(2): EMPLOYEE_COMPANIES_ADMIN  // Admin → [Company IDs]
-MemoryId(3): COMPANY_MAP            // Company ID → Company struct
-MemoryId(4): EMPLOYEE_MAP           // Employee ID → Employee struct
-MemoryId(5): PROOF_MAP              // Proof ID → Proof struct
-
-// Storage Guarantees
-✓ Survives canister upgrades
-✓ Consistent serialization (Candid encoding)
-✓ Bounded storage sizes (prevents DoS)
-✓ Efficient B-tree indexing
-✓ Atomic operations (ACID properties)
-```
-
-#### Data Structures
-
-```rust
-// Storable Types (Candid serialization)
-
-struct Company {
-    id: String,              // Unique company identifier
-    name: String,            // Display name
-    admin_id: String,        // Principal ID of admin
-    created_at: u64,         // Timestamp (nanoseconds)
-    is_active: bool,         // For future subscription system
-}
-// Max size: 512 bytes
-
-struct Employee {
-    id: String,              // Principal ID
-    full_name: String,       // Optional display name
-}
-// Max size: 512 bytes
-
-struct Proof {
-    code: String,            // SHA-256 hash (64 hex chars)
-    company_id: String,      // Company identifier
-    employee_id: String,     // Employee Principal ID
-    created_at: u64,         // Generation timestamp
-    expires_at: u64,         // created_at + 24 hours
-    is_used: bool,           // Single-use flag
-}
-// Max size: 512 bytes
-
-struct IDList {
-    ids: Vec<String>,        // Dynamic array of IDs
-}
-// Max size: 1024 bytes (supports ~50 IDs)
-```
-
 ---
-
-## 🛠️ Technology Stack
-
-### Backend (Rust Canister)
-
-**Core Technologies:**
-```rust
-[dependencies]
-ic-cdk = "0.17"                    // Internet Computer SDK
-ic-stable-structures = "0.5.4"     // Persistent storage
-candid = "0.10"                    // Interface Definition Language
-serde = { version = "1.0", features = ["derive"] }
-sha2 = "0.10"                      // SHA-256 hashing
-hex = "0.4"                        // Hex encoding/decoding
-```
-
-**Key Features:**
-- **Memory Safety** - Rust's ownership system prevents memory bugs
-- **Zero-cost Abstractions** - High-level code compiles to efficient WebAssembly
-- **Concurrency Safe** - Thread-local storage with RefCell for interior mutability
-- **Type Safety** - Candid ensures type-safe inter-canister calls
-- **Upgrade Safe** - Stable structures persist across canister upgrades
-
-**Cryptographic Libraries:**
-- **sha2** - Pure Rust SHA-256 implementation (FIPS 180-4 compliant)
-- **hex** - Constant-time encoding/decoding (timing attack resistant)
-- **ic-cdk::raw_rand()** - Cryptographically secure random number generator
-
-### Frontend (Next.js)
-
-**Framework & Libraries:**
-```json
-{
-  "dependencies": {
-    "next": "15.x",                 // React meta-framework
-    "react": "19.x",                // UI library
-    "typescript": "5.x",            // Type-safe JavaScript
-    "tailwindcss": "3.x",           // Utility-first CSS
-    "framer-motion": "11.x",        // Animation library
-    "react-hook-form": "7.x",       // Form state management
-    "zod": "3.x",                   // Schema validation
-    "@hookform/resolvers": "3.x"    // Form validation adapter
-  }
-}
-```
-
-**UI Component Library:**
-- **Shadcn/ui** - Accessible, customizable components
-- **Radix UI** - Unstyled, accessible primitives
-- **Lucide Icons** - Clean, consistent icon set
-- **Tailwind Variants** - Type-safe component variants
-
-**Features:**
-- **Server-Side Rendering** - SEO-friendly, fast initial load
-- **Static Site Generation** - Pre-rendered pages for performance
-- **Progressive Web App** - Installable, offline-capable
-- **Type-Safe Forms** - Zod schemas with React Hook Form
-- **Optimistic Updates** - Instant UI feedback before blockchain confirmation
-
-### Internet Computer Protocol (ICP)
-
-**Why ICP?**
-
-- **True Decentralization** - No cloud providers (AWS, Azure, GCP)
-- **Web Speed** - Sub-second query responses
-- **Scalability** - Horizontal scaling via subnet replication
-- **Reverse Gas Model** - Users don't pay transaction fees
-- **Chain-Key Cryptography** - Efficient signature verification
-- **Canister Smart Contracts** - WebAssembly-based execution
-
-**ICP Advantages for Proofly:**
-```
-✓ Query calls are free (verification API costs nothing)
-✓ Update calls are cheap (cycles-based pricing)
-✓ Stable memory survives upgrades (no data loss)
-✓ HTTP outcalls (future integrations with external APIs)
-✓ Randomness beacon (secure random number generation)
-✓ Time oracle (trusted timestamps)
-```
-
----
-
-## 🌐 API Reference
-
-### **generate_proof**
-**Type:** Update Call (Authenticated)  
-**Access:** Registered employees only
-
-Generate a cryptographically-signed proof of employment.
-
-```typescript
-function generate_proof(company_id: string): Promise<string | null>
-```
-
-**Parameters:**
-- `company_id`: Company identifier to generate proof for
-
-**Returns:**
-- `string`: Proof code in format `RANDOM_CODE-PROOF_ID`
-- `null`: If caller is not employee of company
-
-**Authentication:**
-- Caller's Principal ID must be in company's employee list
-- Checked via `is_works_on(user_id, company_id)`
-
-**Example:**
-```typescript
-// Employee generates proof for Google
-const code = await backend.generate_proof("google");
-// Returns: "k3Lp9mQx7n-1234567890"
-
-// Non-employee tries to generate proof
-const code = await backend.generate_proof("apple");
-// Returns: null (not authorized)
-```
-
-**Technical Details:**
-- Uses ICP's `raw_rand()` for cryptographic randomness
-- SHA-256 hash stored on-chain
-- Original code returned once (never stored in plaintext)
-- Valid for 24 hours from generation
-- Single-use (marked used after verification)
-
----
-
-### **verify_proof**
-**Type:** Query Call (Public)  
-**Access:** Anyone (no authentication)
-
-Verify employment proof code and retrieve employment details.
-
-```typescript
-function verify_proof(proof_code: string): Promise<Result<Proof, string>>
-
-type Proof = {
-  code: string;          // SHA-256 hash (hex-encoded)
-  company_id: string;    // Company identifier
-  employee_id: string;   // Employee Principal ID
-  created_at: bigint;    // Nanoseconds since Unix epoch
-  expires_at: bigint;    // created_at + 24 hours
-  is_used: boolean;      // Marked true after verification
-}
-```
-
-**Parameters:**
-- `proof_code`: Complete proof code (e.g., `"k3Lp9mQx7n-1234567890"`)
-
-**Returns:**
-- `Ok(Proof)`: Valid proof with employment metadata
-- `Err("Proof not found")`: Invalid Proof ID
-- `Err("Proof expired")`: More than 24 hours old
-- `Err("Proof already used")`: Already verified once
-- `Err("Proof code mismatch")`: Hash verification failed
-
-**Example:**
-```typescript
-// Successful verification
-const result = await backend.verify_proof("k3Lp9mQx7n-1234567890");
-console.log(result);
-// Output:
-// {
-//   code: "a1b2c3d4e5f6...",
-//   company_id: "google",
-//   employee_id: "2vxsx-fae",
-//   created_at: 1735574400000000000n,
-//   expires_at: 1735660800000000000n,
-//   is_used: true
-// }
-
-// Invalid code
-const result = await backend.verify_proof("invalid-123");
-// Returns: Error "Proof not found"
-```
-
-**Security Properties:**
-- Constant-time hash comparison (timing attack resistant)
-- Single-use enforcement (prevents replay attacks)
-- Time-based expiration (limits exposure window)
-- Public verifiability (anyone can check)
-
----
-
-### **add_employee**
-**Type:** Update Call (Authenticated)  
-**Access:** Company admins only
-
-Add employee to company roster.
-
-```typescript
-function add_employee(comp_id: string, emp_id: string): Promise<boolean>
-```
-
-**Parameters:**
-- `comp_id`: Company identifier
-- `emp_id`: Employee's Principal ID
-
-**Returns:**
-- `true`: Employee successfully added
-- `false`: Caller is not admin of company
-
-**Authentication:**
-- Caller must be in company's admin list
-- Checked via `is_company_admin(caller, comp_id)`
-
-**Example:**
-```typescript
-// Admin adds new hire
-const success = await backend.add_employee(
-  "google",
-  "2vxsx-fae"  // Employee's Principal ID
-);
-// Returns: true
-
-// Non-admin tries to add employee
-const success = await backend.add_employee("google", "xyz");
-// Returns: false (not authorized)
-```
-
-**Side Effects:**
-- Updates `COMPANY_EMPLOYEES` map
-- Updates `EMPLOYEE_COMPANIES` map
-- Idempotent (adding same employee twice is safe)
-
----
-
-### **remove_employee**
-**Type:** Update Call (Authenticated)  
-**Access:** Company admins only
-
-Remove employee from company roster.
-
-```typescript
-function remove_employee(comp_id: string, emp_id: string): Promise<boolean>
-```
-
-**Parameters:**
-- `comp_id`: Company identifier
-- `emp_id`: Employee's Principal ID to remove
-
-**Returns:**
-- `true`: Employee successfully removed
-- `false`: Caller is not admin OR employee not found
-
-**Example:**
-```typescript
-const success = await backend.remove_employee("google", "2vxsx-fae");
-// Returns: true (employee removed)
-```
-
----
-
-### **add_new_companey**
-**Type:** Update Call (Authenticated)  
-**Access:** Anyone (caller becomes admin)
-
-Register new company on platform.
-
-```typescript
-function add_new_companey(
-  comp_username: string,
-  comp_name: string
-): Promise<Result<void, string>>
-```
-
-**Parameters:**
-- `comp_username`: Unique company identifier (used in URLs)
-- `comp_name`: Display name of company
-
-**Returns:**
-- `Ok(())`: Company created successfully
-- `Err("username is already exist")`: Duplicate company ID
-
-**Example:**
-```typescript
-await backend.add_new_companey("google", "Google Inc.");
-// Caller becomes admin of "google"
-
-await backend.add_new_companey("google", "Another Google");
-// Error: username already exists
-```
-
----
-
-### **list_my_companies**
-**Type:** Query Call (Authenticated)  
-**Access:** Authenticated users
-
-List all companies where caller is employee.
-
-```typescript
-function list_my_companies(): Promise<string[]>
-```
-
-**Returns:**
-- Array of company IDs where caller is registered employee
-
-**Example:**
-```typescript
-const companies = await backend.list_my_companies();
-// Returns: ["google", "microsoft", "apple"]
-```
-
----
-
-### **list_company_employess**
-**Type:** Query Call (Public)  
-**Access:** Anyone
-
-List all employees of a company.
-
-```typescript
-function list_company_employess(comp_id: string): Promise<string[]>
-```
-
-**Parameters:**
-- `comp_id`: Company identifier
-
-**Returns:**
-- Array of employee Principal IDs
-
-**Example:**
-```typescript
-const employees = await backend.list_company_employess("google");
-// Returns: ["2vxsx-fae", "rrkah-fqaaa-...", ...]
-```
-
----
-
-## 📊 Use Cases
-
-### Legal & Litigation
-
-**Scenario:** Employment dispute requiring proof of employment
-
-**How Proofly Helps:**
-- Cryptographically-signed proof codes serve as tamper-proof evidence
-- Blockchain timestamps provide verifiable creation dates
-- Immutable records prevent document forgery
-- Instant verification during court proceedings
-
-**Technical Flow:**
-```typescript
-// Employee generates proof during employment period
-const proof = await generate_proof("acme-corp");
-
-// Later: Legal team verifies in court
-const verification = await verify_proof(proof);
-// Returns cryptographic proof with timestamps
-```
-
----
-
-### Background Checks
-
-**Scenario:** Recruitment agency verifying candidate's employment history
-
-**How Proofly Helps:**
-- Instant verification instead of manual phone calls
-- Cryptographic proof prevents resume fraud
-- Free API access reduces verification costs
-- Privacy-preserving (only confirms employment, no salary/role details)
-
-**Technical Flow:**
-```typescript
-// Candidate provides proof code during interview
-const result = await verify_proof(candidateCode);
-
-if (result.ok) {
-  console.log(`Verified: Employee of ${result.company_id}`);
-  console.log(`Employment confirmed at ${new Date(result.created_at)}`);
-}
-```
-
----
-
-### Financial Services KYC
-
-**Scenario:** Bank requires employment verification for loan application
-
-**How Proofly Helps:**
-- Instant KYC processing (vs days of manual verification)
-- Fraud-proof cryptographic validation
-- GDPR-compliant (minimal personal data)
-- Auditable verification trail for regulators
-
----
-
-### Social Media Verification
-
-**Scenario:** LinkedIn wants to verify employment claims on user profiles
-
-**How Proofly Helps:**
-- Public API for automated verification
-- "Verified Employee" badges backed by blockchain
-- Prevents impersonation scams
-- Real-time verification without manual review
-
----
-
-### Cross-Border Employment
-
-**Scenario:** International company hiring remote workers globally
-
-**How Proofly Helps:**
-- Works identically in all countries (blockchain has no borders)
-- No currency conversion or international fees
-- Uniform verification standard across jurisdictions
-- Instant verification regardless of time zones
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-```bash
-# Install DFX (Internet Computer SDK)
-sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
-
-# Verify installation
-dfx --version
-
-# Install Node.js (v18 or higher)
-node --version
-
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustc --version
-```
-
-### Local Development
-
-**1. Clone Repository**
-```bash
-git clone https://github.com/yourusername/proofly.git
-cd proofly
-```
-
-**2. Start ICP Local Replica**
-```bash
-# Start blockchain in background
-dfx start --clean --background
-
-# Verify it's running
-dfx ping
-```
-
-**3. Deploy Backend Canister**
-```bash
-# Compile Rust code to WebAssembly
-dfx deploy backend
-
-# Get canister ID
-dfx canister id backend
-```
-
-**4. Build & Deploy Frontend**
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Build production bundle
-npm run build
-
-# Deploy to ICP
-dfx deploy frontend
-```
-
-**5. Access Application**
-```bash
-# Get frontend URL
-echo "http://localhost:4943/?canisterId=$(dfx canister id frontend)"
-
-# Open in browser
-```
-
-### Testing
-
-**Get Your Principal ID:**
-```bash
-dfx identity get-principal
-# Output: 2vxsx-fae...
-```
-
-**Test Backend Functions:**
-```bash
-# Create company
-dfx canister call backend add_new_companey '("google", "Google Inc.")'
-
-# Add yourself as employee
-dfx canister call backend add_employee '("google", "YOUR_PRINCIPAL_ID")'
-
-# Generate proof
-dfx canister call backend generate_proof '("google")'
-# Output: (opt "k3Lp9mQx7n-1234567890")
-
-# Verify proof (anyone can call)
-dfx canister call backend verify_proof '("k3Lp9mQx7n-1234567890")'
-
-# List your companies
-dfx canister call backend list_my_companies '()'
-
-# List company employees
-dfx canister call backend list_company_employess '("google")'
-
-
----
-
-## 🔒 Security & Privacy
-
-### Cryptographic Security
-
-**Hash Function:** SHA-256
-- **Standard:** NIST FIPS 180-4 approved
-- **Properties:**
-  - Collision resistance: Finding two inputs with same hash is computationally infeasible
-  - Pre-image resistance: Cannot reverse hash to find original input
-  - Avalanche effect: Single bit change produces completely different hash
-- **Output:** 256 bits (64 hexadecimal characters)
-- **Usage in Bitcoin/SSL:** Same algorithm securing billions in cryptocurrency and web traffic
-
-**Random Number Generation:**
-- **Source:** ICP's threshold signature randomness beacon
-- **Security:** Unpredictable, unbiasable, verifiable
-- **Fallback:** Timestamp-based entropy if beacon unavailable
-- **Character set:** 62 characters (A-Z, a-z, 0-9)
-- **Keyspace:** 62^10 ≈ 839 trillion combinations
-
-**Access Control:**
-- **Authentication:** Principal-based (ICP's public-key cryptography)
-- **Authorization:** Role-based permissions (admin, employee)
-- **Session Management:** No sessions (stateless verification)
-- **Password Storage:** None (uses Internet Identity)
-
-### Privacy Compliance
-
-**Data Minimization:**
-- ✅ Only store cryptographic identifiers (Principal IDs)
-- ✅ No names, emails, phone numbers, or addresses
-- ✅ No job titles, salaries, or departments
-- ✅ Proof codes stored as hashes only (zero-knowledge)
-
-**GDPR Compliance:**
-- ✅ Right to erasure (employees can be removed)
-- ✅ Data portability (query endpoints provide all data)
-- ✅ Purpose limitation (only used for verification)
-- ✅ Privacy by design (minimal data architecture)
-- ✅ Transparent processing (all operations auditable on-chain)
-
-**CCPA Compliance:**
-- ✅ Consumer rights (employees control proof generation)
-- ✅ No data sales (non-commercial open-source project)
-- ✅ Opt-in model (voluntary participation)
-
-### Attack Prevention
-
-**Replay Attacks:**
-- ✅ Single-use proofs (marked `is_used` after verification)
-- ✅ Time-based expiration (24-hour validity window)
-- ✅ Unique Proof IDs (cannot forge new proofs)
-
-**Timing Attacks:**
-- ✅ Constant-time hash comparison
-- ✅ No early returns based on hash match position
-
-**DoS Attacks:**
-- ✅ Bounded storage sizes (max 512 bytes per struct)
-- ✅ ICP rate limiting (cycles-based cost model)
-- ✅ Query calls are cheap (can't drain cycles easily)
-
-**Sybil Attacks:**
-- ✅ Principal IDs are cryptographically unique
-- ✅ Company admins control employee roster
-- ✅ No anonymous proof generation
----
-
 ## 🏆 Built at Legal Tech Hackathon 2025
 
 This project was developed during **Legal Tech Hackathon 2025** to address the critical need for cryptographically-verifiable employment records in legal proceedings and compliance.
@@ -937,69 +456,68 @@ Proofly demonstrates how:
 - **Privacy-preserving design** meets GDPR/CCPA requirements
 - **Public APIs** enable global verification without intermediaries
 
+
+
+
+
+
+**🔗 Built on the Internet Computer Protocol (ICP) 🔗**
+
+⭐ **Star this repo if you believe in decentralized legal tech!** ⭐
+
+
+## 🔗 Resources
+
+**Deployment:**
+- Frontend Canister: [5kykv-2qaaa-aaaas-qcs6q-cai](https://5kykv-2qaaa-aaaas-qcs6q-cai.icp0.io/)
+- Backend Canister: [5nzmb-xiaaa-aaaas-qcs6a-cai]( https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=5nzmb-xiaaa-aaaas-qcs6a-cai)
+- Live URL: https://5kykv-2qaaa-aaaas-qcs6q-cai.icp0.io/
+
+**Repository:**
+- GitHub: [https://github.com/AbdoViper23/proofly](https://github.com/AbdoViper23/proofly)`
+- License: MIT
+
+
 ---
+## 📚 References
 
-## 🤝 Contributing
-
-We welcome contributions from developers, security researchers, and legal tech enthusiasts!
-
-### How to Contribute
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** changes (`git commit -m 'Add cryptographic feature'`)
-4. **Push** to branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Development Guidelines
-
-**Code Quality:**
-```bash
-# Rust formatting
-cargo fmt
-
-# Rust linting
-cargo clippy
-
-# TypeScript checking
-npm run type-check
-```
-
-**Testing:**
-```bash
-# Unit tests (Rust)
-cargo test
-
-# Integration tests
-dfx deploy
-./scripts/test-integration.sh
-```
-
-**Security:**
-- Follow Rust secure coding practices
-- Validate all inputs
-- Use constant-time comparisons for secrets
-- Document threat model for new features
+### 🔹 Cited Sources
+1) [LinkedIn – Digital Cyber Blockchain](https://www.linkedin.com/posts/digital-cyber-blockchain_fake-jobs-most-of-those-jobs-didnt-actually-activity-7364465833458241536-FZ8D)  
+2) [Reddit – Recruiting Hell: 68% of Hiring Managers Admit to Posting Ghost Jobs](https://www.reddit.com/r/recruitinghell/comments/1k8b8ow/nearly_68_of_hiring_managers_admitted_to_posting/)  
+3) [CIO – Beware the Rise of Ghost Jobs](https://www.cio.com/article/3610861/beware-the-rise-of-ghost-jobs-fake-job-openings-with-no-intent-to-hire.html)  
+4) [Aerotek – Impact of Job Scams on Job Searches](https://www.aerotek.com/en/insights/impact-of-job-scams-on-job-searches)
 
 ---
 
+### 🔹 Additional References & Recommended Reading
+5) [PR Newswire – 48% of US Workers Surveyed Say They Are on the Job Hunt](https://www.prnewswire.com/news-releases/anxious-yet-undeterred-48-of-us-workers-surveyed-say-they-are-on-the-job-hunt-despite-hurdles-like-phantom-jobs-ghosting-bias-and-ai-bot-vs-bot-market-302327722.html)  
+6) [Jobs.ca – How to Spot Fake Job Postings](https://www.jobs.ca/blogs/how-to-spot-fake-job-postings-the-red-flags-that-will-save-you-hours)  
+7) [TryScamShield – Job Scam Awareness](https://tryscamshield.com/)  
+8) [LinkedIn News – Could You Fall for a Job Scam?](https://www.linkedin.com/news/story/could-you-fall-for-a-job-scam-6017172/?trk=news_directory)  
+9) [Denim – Freight Fraud Prevention Resources](https://www.denim.com/collection/freight-fraud-prevention-resources)
 
 
-## 🙏 Acknowledgments
+---
 
-**Built With:**
-- [Internet Computer Protocol](https://internetcomputer.org) - Decentralized cloud platform
-- [DFINITY Foundation](https://dfinity.org) - ICP development team
-- [Rust Language](https://rust-lang.org) - Systems programming excellence
-- [Next.js](https://nextjs.org) - React framework
-- [Shadcn/ui](https://ui.shadcn.com) - Component library
+## 🏅 Conclusion
+
+**A Decentralized Cryptographical Employment State Verification Solution for Legal & Social Proof that:**<br>
+✅ Leverages ICP's unique features (tamper-resistance, identity, cryptography, speed, decentralized hosting).<br>
+✅ Solves real legal and social problems (compliance + scam protection).<br>
+✅ Runs 100% on-chain.<br>
+✅ Protects both employers and employees.<br>
+✅ Scales globally across jurisdictions.
 
 ---
 
 <div align="center">
 
-**🔗 Built on the Internet Computer Protocol (ICP) 🔗**
+Built with ❤️ on the Internet Computer Protocol.<br>
+Developed for **LegalHack 2025**.
 
-⭐ **Star this repo if you believe in decentralized legal tech!** ⭐
+*Transforming employment verification to the digital age.*
+
+---
+
 
 </div>

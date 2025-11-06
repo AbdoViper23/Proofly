@@ -11,7 +11,7 @@
 
 **Blockchain-powered employment verification using cryptographic proofs for legal compliance and fraud prevention**
 
-[Live Demo](#) | [Documentation](#api-reference) | [Technical Architecture](#architecture)
+[Live App](https://5kykv-2qaaa-aaaas-qcs6q-cai.icp0.io/)
 
 </div>
 
